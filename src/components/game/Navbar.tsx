@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Book, Trophy, HelpCircle, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Navbar = () => {
@@ -20,23 +19,11 @@ const Navbar = () => {
 
           {/* Login Button */}
           <Button variant="default" size="default">
-            登录
+            登录（disable）
           </Button>
         </div>
       </div>
     </motion.nav>
-  );
-};
-
-const NavLink = ({ href, icon, text }: { href: string; icon: React.ReactNode; text: string }) => {
-  return (
-    <Link
-      href={href}
-      className="flex items-center space-x-1 text-gray-300 hover:text-white transition-colors duration-200"
-    >
-      {icon}
-      <span>{text}</span>
-    </Link>
   );
 };
 

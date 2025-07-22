@@ -4,22 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatTime } from '@/lib/utils';
 import { io, Socket } from 'socket.io-client';
-import { 
-  Play, 
-  RotateCcw, 
-  Users, 
-  UserX, 
-  Clock, 
-  Trophy, 
-  Wifi, 
-  WifiOff,
-  Target,
-  Activity,
-  BarChart3,
-  Zap,
-  Crown,
-  AlertTriangle
-} from 'lucide-react';
+import { Play, RotateCcw, Users, UserX, Clock, Trophy, Wifi, WifiOff,Target, Activity, BarChart3, Zap, Crown, AlertTriangle } from 'lucide-react';
 
 interface Question {
   id: string;

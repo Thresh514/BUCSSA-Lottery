@@ -1,62 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { motion } from 'framer-motion';
-import { Mail, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [step, setStep] = useState<'email' | 'code'>('email');
-  const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleSendCode = async () => {
-    if (!email || loading) return;
-    
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/send-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      if (res.ok) {
-        setStep('code');
-      } else {
-        throw new Error('发送验证码失败');
-      }
-    } catch (error) {
-      console.error('发送验证码失败:', error);
-      // 这里可以添加错误提示
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    if (!code || loading) return;
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code })
-      });
-
-      if (res.ok) {
-        window.location.href = '/play';
-      } else {
-        throw new Error('验证码错误');
-      }
-    } catch (error) {
-      console.error('验证失败:', error);
-      // 这里可以添加错误提示
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleSignIn = async () => {
+    await signIn('google', { callbackUrl: '/play' });
   };
 
   return (
@@ -81,95 +33,31 @@ export default function LoginPage() {
         >
           {/* Logo */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">缩圈抽奖</h1>
-            <p className="text-gray-400">输入邮箱获取验证码</p>
+            <h1 className="text-3xl font-bold text-white mb-2">BUCSSA 活动抽奖</h1>
+            <p className="text-gray-400">使用 BU 或 Gmail 账户登录</p>
           </div>
 
           <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
-            {step === 'email' ? (
-              <>
-                {/* 邮箱输入 */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    邮箱地址
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white/10 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="输入你的邮箱"
-                    />
-                    <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  </div>
-                  <p className="mt-2 text-sm text-gray-400">
-                    验证码有效期为5分钟
-                  </p>
-                </div>
+            {/* Google 登录按钮 */}
+            <button
+              onClick={handleGoogleSignIn}
+              className="w-full flex items-center justify-center bg-white text-gray-800 rounded-lg px-4 py-3 font-medium transition-all duration-300 hover:shadow-lg hover:scale-105 mb-4"
+            >
+              <Image
+                src="/google.svg"
+                alt="Google"
+                width={20}
+                height={20}
+                className="mr-2"
+              />
+              使用 Google 账户登录
+            </button>
 
-                {/* 发送验证码按钮 */}
-                <button
-                  onClick={handleSendCode}
-                  disabled={loading || !email}
-                  className={`w-full bg-gradient-to-r from-[#28a7ff] to-[#0066ff] text-white rounded-lg px-4 py-3 font-medium transition-all duration-300 ${
-                    loading || !email
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:shadow-lg hover:scale-105'
-                  }`}
-                >
-                  {loading ? '发送中...' : '发送验证码'}
-                </button>
-              </>
-            ) : (
-              <>
-                {/* 验证码输入 */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    验证码
-                  </label>
-                  <input
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="w-full bg-white/10 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="输入6位验证码"
-                    maxLength={6}
-                  />
-                  <div className="mt-2 flex justify-between items-center">
-                    <p className="text-sm text-gray-400">
-                      验证码已发送至 {email}
-                    </p>
-                    <button
-                      onClick={() => setStep('email')}
-                      className="text-sm text-blue-400 hover:text-blue-300"
-                    >
-                      更换邮箱
-                    </button>
-                  </div>
-                </div>
+            {/* 提示信息 */}
+            <p className="text-sm text-gray-400 text-center mt-4">
+              仅支持 BU.EDU 和 Gmail 邮箱登录
+            </p>
 
-                {/* 验证按钮 */}
-                <button
-                  onClick={handleVerifyCode}
-                  disabled={loading || code.length !== 6}
-                  className={`w-full bg-gradient-to-r from-[#28a7ff] to-[#0066ff] text-white rounded-lg px-4 py-3 font-medium transition-all duration-300 ${
-                    loading || code.length !== 6
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:shadow-lg hover:scale-105'
-                  }`}
-                >
-                  {loading ? '验证中...' : '开始答题'}
-                </button>
-              </>
-            )}
-
-            {/* 安全提示 */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-400">
-                安全登录 · 隐私保护
-              </p>
-            </div>
           </div>
         </motion.div>
       </div>

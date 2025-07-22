@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { formatTime } from '@/lib/utils';
 import { io, Socket } from 'socket.io-client';
+import { useSession, signOut } from 'next-auth/react';
 import { 
   Users, 
   UserX, 
@@ -39,7 +40,7 @@ interface GameState {
 }
 
 export default function PlayPage() {
-  const [user, setUser] = useState<any>(null);
+  const { data: session, status } = useSession();
   const [gameState, setGameState] = useState<GameState>({
     status: 'waiting',
     currentQuestionId: null,
@@ -57,22 +58,17 @@ export default function PlayPage() {
   const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
 
-  /*useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (!token || !userData) {
+  useEffect(() => {
+    if (status === 'unauthenticated') {
       router.push('/login');
       return;
     }
 
-    const parsedUser = JSON.parse(userData);
-    setUser(parsedUser);
-    setIsEliminated(!parsedUser.isAlive);
+    if (!session?.user?.email) return;
 
     const socket = io({
       auth: {
-        token: token,
+        email: session.user.email,
       },
     });
 
@@ -123,7 +119,7 @@ export default function PlayPage() {
     });
 
     socket.on('eliminated', (data: any) => {
-      if (data.userId === parsedUser.id) {
+      if (data.userId === session.user?.email) {
         setIsEliminated(true);
         setMessage('很遗憾，您已被淘汰！');
       }
@@ -131,7 +127,7 @@ export default function PlayPage() {
 
     socket.on('game_ended', (data: any) => {
       setGameState(prev => ({ ...prev, status: 'ended' }));
-      if (data.winner === parsedUser.id) {
+      if (data.winner === session.user?.email) {
         setMessage('🎉 恭喜您获得第一名！');
       } else {
         setMessage('游戏结束！');
@@ -145,7 +141,7 @@ export default function PlayPage() {
     return () => {
       socket.disconnect();
     };
-  }, [router, gameState.eliminatedCount]);*/
+  }, [router, gameState.eliminatedCount, session, status]);
 
   const handleSubmitAnswer = (option: string) => {
     if (!socketRef.current || !currentQuestion || isEliminated) return;
@@ -160,16 +156,14 @@ export default function PlayPage() {
     setMessage(`您选择了选项 ${option}`);
   };
 
-  //const handleLogout = () => {
-  //  localStorage.removeItem('token');
-  //  localStorage.removeItem('user');
-  //  if (socketRef.current) {
-  //    socketRef.current.disconnect();
-  //  }
-  //  router.push('/login');
-  //};
+  const handleLogout = async () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+    await signOut({ callbackUrl: '/login' });
+  };
 
-  /*if (!user) {
+  if (status === 'loading' || !session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -178,7 +172,7 @@ export default function PlayPage() {
         </div>
       </div>
     );
-  }*/
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -189,10 +183,10 @@ export default function PlayPage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
-                  <Target className="w-5 h-5 text-white" />
+                  <Target className="w-5 h-5 text-black" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">缩圈抽奖</h1>
+                  <h1 className="text-xl font-bold text-gray-900">BUCSSA 活动抽奖</h1>
                   <div className="flex items-center gap-2">
                     {connected ? (
                       <Wifi className="w-4 h-4 text-green-500" />
@@ -212,15 +206,15 @@ export default function PlayPage() {
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
                 <p className="text-sm text-gray-600">欢迎回来</p>
-                {/*<p className="text-sm font-medium text-gray-900">{user.email}</p>*/}
+                <p className="text-sm font-medium text-gray-900">{session?.user?.email}</p>
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                //onClick={handleLogout}
-                className="rounded-xl"
+                onClick={handleLogout}
+                className="rounded-2xl text-black"
               >
-                <LogOut className="w-4 h-4 mr-2" />
+                <LogOut className="w-4 h-4 mr-2 text-black" />
                 退出
               </Button>
             </div>
@@ -294,7 +288,7 @@ export default function PlayPage() {
         {currentQuestion && gameState.status === 'playing' && !isEliminated && (
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-8 animate-slide-up">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-primary text-white rounded-full text-sm font-medium mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-primary text-black rounded-full text-sm font-medium mb-4">
                 <Target className="w-4 h-4" />
                 第 {gameState.round} 题
               </div>

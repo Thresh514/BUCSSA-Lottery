@@ -89,7 +89,7 @@ const HeroSection = ({
               你已被淘汰
             </div>
           ) : (
-            <Button variant="outline" size="lg" onClick={onStartGame}>
+            <Button variant="outline" size="xl" onClick={onStartGame}>
               开始答题
             </Button>
           )}
