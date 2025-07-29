@@ -1,8 +1,8 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import { verifyJWT } from '@/lib/jwt';
 import { redis, RedisKeys } from '@/lib/redis';
 import { env } from '@/lib/env';
+import { GameManager } from './game';
 
 // 全局Socket.IO服务器实例
 let io: SocketIOServer | null = null;
@@ -19,30 +19,25 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     },
   });
 
-  // 中间件：JWT认证
+  // 中间件：验证用户邮箱
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth.token;
-      if (!token) {
-        return next(new Error('未提供认证令牌'));
+      const email = socket.handshake.auth.email;
+      if (!email) {
+        return next(new Error('未提供邮箱'));
       }
 
-      const payload = verifyJWT(token);
-      if (!payload) {
-        return next(new Error('无效的认证令牌'));
+      // 验证邮箱域名
+      if (!email.endsWith('@bu.edu') && !email.endsWith('@gmail.com')) {
+        return next(new Error('不支持的邮箱域名'));
       }
-
-      // 验证用户是否还在存活列表中
-      const isAlive = await redis.sismember(
-        RedisKeys.roomSurvivors(env.DEFAULT_ROOM_ID),
-        payload.userId
-      );
 
       socket.data.user = {
-        id: payload.userId,
-        email: payload.email,
-        isAlive: isAlive === 1,
+        email,
       };
+
+      // 更新用户在线状态
+      await redis.set(RedisKeys.userOnline(email), '1', 'EX', 300); // 5分钟过期
 
       next();
     } catch (error) {
@@ -58,51 +53,63 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     // 用户加入游戏房间
     socket.join(env.DEFAULT_ROOM_ID);
 
+    // 检查用户是否已在游戏中，如果不在则添加到存活列表
+    const gameManager = new GameManager();
+    const isInGame = await redis.sismember(RedisKeys.roomSurvivors(env.DEFAULT_ROOM_ID), user.email);
+    const isEliminated = await redis.sismember(RedisKeys.roomEliminated(env.DEFAULT_ROOM_ID), user.email);
+    
+    if (!isInGame && !isEliminated) {
+      // 新用户加入游戏
+      await gameManager.addPlayer(user.email);
+      console.log(`新用户 ${user.email} 加入游戏`);
+    }
+
     // 发送当前游戏状态
     const gameState = await getGameState();
     socket.emit('game_state', gameState);
 
     // 如果用户已被淘汰，立即通知
-    if (!user.isAlive) {
-      socket.emit('eliminated', { message: '您已被淘汰' });
+    if (isEliminated) {
+      socket.emit('eliminated', { 
+        userId: user.email,
+        message: '您已被淘汰' 
+      });
     }
 
     // 处理答题提交
     socket.on('submit_answer', async (data) => {
-      const { questionId, selectedOption } = data;
+      const { answer } = data;
 
-      if (!user.isAlive) {
+      if (!answer || !['A', 'B'].includes(answer)) {
+        socket.emit('error', { message: '请选择A或B选项' });
+        return;
+      }
+
+      // 检查用户是否还在存活列表中
+      const isAlive = await redis.sismember(RedisKeys.roomSurvivors(env.DEFAULT_ROOM_ID), user.email);
+      if (!isAlive) {
         socket.emit('error', { message: '您已被淘汰，无法答题' });
         return;
       }
 
-      // 检查是否为当前题目
-      const currentQuestion = await redis.hgetall(
-        RedisKeys.currentQuestion(env.DEFAULT_ROOM_ID)
-      );
+      try {
+        // 使用GameManager提交答案
+        await gameManager.submitAnswer(user.email, answer);
+        
+        // 更新用户在线状态
+        await redis.set(RedisKeys.userOnline(user.email), '1', 'EX', 300);
 
-      if (!currentQuestion.id || currentQuestion.id !== questionId) {
-        socket.emit('error', { message: '题目已过期' });
-        return;
+        console.log(`用户 ${user.email} 提交答案: ${answer}`);
+      } catch (error: any) {
+        socket.emit('error', { message: error.message });
       }
-
-      // 保存用户答题记录
-      await redis.set(
-        RedisKeys.userAnswer(user.id, questionId),
-        JSON.stringify({
-          userId: user.id,
-          questionId,
-          selectedOption,
-          submittedAt: new Date().toISOString(),
-        })
-      );
-
-      console.log(`用户 ${user.email} 提交答案: ${selectedOption}`);
     });
 
     // 断开连接处理
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
       console.log(`用户 ${user.email} 已断开连接`);
+      // 清除用户在线状态
+      await redis.del(RedisKeys.userOnline(user.email));
     });
   });
 
@@ -119,13 +126,15 @@ async function getGameState() {
     currentQuestion,
     survivorsCount,
     eliminatedCount,
-    currentRound
+    currentRound,
+    onlineUsers
   ] = await Promise.all([
     redis.hgetall(RedisKeys.gameState(roomId)),
     redis.hgetall(RedisKeys.currentQuestion(roomId)),
     redis.scard(RedisKeys.roomSurvivors(roomId)),
     redis.scard(RedisKeys.roomEliminated(roomId)),
     redis.get(RedisKeys.currentRound(roomId)),
+    redis.keys(RedisKeys.userOnline('*')),
   ]);
 
   return {
@@ -136,6 +145,7 @@ async function getGameState() {
     totalPlayers: survivorsCount + eliminatedCount,
     survivorsCount,
     eliminatedCount,
+    onlineCount: onlineUsers.length,
   };
 }
 

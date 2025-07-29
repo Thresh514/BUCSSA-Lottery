@@ -2,20 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { formatTime } from '@/lib/utils';
 import { io, Socket } from 'socket.io-client';
-import { Play, RotateCcw, Users, UserX, Clock, Trophy, Wifi, WifiOff,Target, Activity, BarChart3, Zap, Crown, AlertTriangle } from 'lucide-react';
-
-interface Question {
-  id: string;
-  question: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-}
+import { Play, RotateCcw, Users, UserX, Clock, Trophy, Wifi, WifiOff, Target, Activity, BarChart3, Zap, Crown, AlertTriangle, Plus, X } from 'lucide-react';
+import { MinorityQuestion, RoundStats } from '@/types';
 
 interface GameStats {
   totalPlayers: number;
@@ -24,6 +15,7 @@ interface GameStats {
   currentRound: number;
   status: string;
   timeLeft: number;
+  roundStats?: RoundStats;
 }
 
 export default function AdminPage() {
@@ -35,10 +27,18 @@ export default function AdminPage() {
     status: 'waiting',
     timeLeft: 0,
   });
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<MinorityQuestion | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [connected, setConnected] = useState(false);
+  
+  // 题目发布表单
+  const [questionForm, setQuestionForm] = useState({
+    question: '',
+    optionA: '',
+    optionB: '',
+  });
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
   
   const socketRef = useRef<Socket | null>(null);
 
@@ -70,6 +70,7 @@ export default function AdminPage() {
     });
 
     socket.on('new_question', (data: any) => {
+      setCurrentQuestion(data.question);
       fetchGameStats();
     });
 
@@ -81,18 +82,19 @@ export default function AdminPage() {
     });
 
     socket.on('round_result', (data: any) => {
-      setMessage(`第${gameStats.currentRound}轮结束：正确答案是 ${data.correctAnswer}，淘汰 ${data.eliminatedCount} 人`);
+      setMessage(`第${gameStats.currentRound}轮结束：少数派选项是 ${data.minorityOption}，A选择${data.majorityCount}人，B选择${data.minorityCount}人，淘汰 ${data.eliminatedCount} 人`);
       fetchGameStats();
     });
 
     socket.on('game_ended', (data: any) => {
-      setMessage('游戏已结束！');
+      setMessage(`游戏已结束！获胜者：${data.winnerEmail || '无'}`);
       fetchGameStats();
     });
 
     socket.on('game_reset', () => {
       setMessage('游戏已重置');
       setCurrentQuestion(null);
+      setShowQuestionForm(false);
       fetchGameStats();
     });
 
@@ -113,13 +115,22 @@ export default function AdminPage() {
     }
   };
 
-  const handleNextQuestion = async () => {
+  const handleSubmitQuestion = async () => {
+    if (!questionForm.question || !questionForm.optionA || !questionForm.optionB) {
+      setMessage('请填写完整的题目内容');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
     try {
       const response = await fetch('/api/admin/next-question', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(questionForm),
       });
 
       const data = await response.json();
@@ -127,6 +138,8 @@ export default function AdminPage() {
       if (response.ok) {
         setCurrentQuestion(data.question);
         setMessage(`第${gameStats.currentRound + 1}题已发布`);
+        setShowQuestionForm(false);
+        setQuestionForm({ question: '', optionA: '', optionB: '' });
         fetchGameStats();
       } else {
         setMessage(data.error || '发布题目失败');
@@ -156,6 +169,7 @@ export default function AdminPage() {
       if (response.ok) {
         setMessage(data.message);
         setCurrentQuestion(null);
+        setShowQuestionForm(false);
         fetchGameStats();
       } else {
         setMessage(data.error || '重置游戏失败');
@@ -202,9 +216,9 @@ export default function AdminPage() {
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">BU CSSA 活动抽奖系统</h1>
+                <h1 className="text-2xl font-bold text-white">少数派游戏 - 管理控制台</h1>
                 <div className="flex items-center gap-3">
-                  <span className="text-gray-300">管理控制台</span>
+                  <span className="text-gray-300">选择人数较少的选项晋级</span>
                   <div className="flex items-center gap-2">
                     {connected ? (
                       <Wifi className="w-4 h-4 text-green-400" />
@@ -223,21 +237,12 @@ export default function AdminPage() {
             
             <div className="flex gap-4">
               <Button
-                onClick={handleNextQuestion}
+                onClick={() => setShowQuestionForm(!showQuestionForm)}
                 disabled={loading || gameStats.status === 'playing'}
                 className="h-12 px-6 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-medium transition-all duration-200 hover-lift disabled:opacity-50 disabled:transform-none"
               >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 spinner"></div>
-                    发布中...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Play className="w-4 h-4" />
-                    发布下一题
-                  </div>
-                )}
+                <Plus className="w-4 h-4 mr-2" />
+                发布新题目
               </Button>
               
               <Button
@@ -330,6 +335,76 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Question Form */}
+        {showQuestionForm && (
+          <div className="glass rounded-3xl p-8 animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-white">发布新题目</h3>
+              <Button
+                onClick={() => setShowQuestionForm(false)}
+                variant="ghost"
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-white font-medium mb-2">题目内容</label>
+                <Input
+                  value={questionForm.question}
+                  onChange={(e) => setQuestionForm(prev => ({ ...prev, question: e.target.value }))}
+                  placeholder="请输入题目内容..."
+                  className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-white font-medium mb-2">选项 A</label>
+                  <Input
+                    value={questionForm.optionA}
+                    onChange={(e) => setQuestionForm(prev => ({ ...prev, optionA: e.target.value }))}
+                    placeholder="选项A内容..."
+                    className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-white font-medium mb-2">选项 B</label>
+                  <Input
+                    value={questionForm.optionB}
+                    onChange={(e) => setQuestionForm(prev => ({ ...prev, optionB: e.target.value }))}
+                    placeholder="选项B内容..."
+                    className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-4">
+                <Button
+                  onClick={handleSubmitQuestion}
+                  disabled={loading || !questionForm.question || !questionForm.optionA || !questionForm.optionB}
+                  className="flex-1 h-12 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-medium transition-all duration-200 hover-lift disabled:opacity-50 disabled:transform-none"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 spinner"></div>
+                      发布中...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Play className="w-4 h-4" />
+                      发布题目
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Current Question Display */}
         {currentQuestion && (
           <div className="glass rounded-3xl p-8 animate-slide-up">
@@ -344,31 +419,56 @@ export default function AdminPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.entries(currentQuestion.options).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="glass-dark rounded-2xl p-6 border-2 border-white/20 hover:border-white/30 transition-all duration-200"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">{key}</span>
-                    </div>
-                    <p className="text-white text-lg font-medium">{value}</p>
+              <div className="glass-dark rounded-2xl p-6 border-2 border-white/20 hover:border-white/30 transition-all duration-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">A</span>
+                  </div>
+                  <p className="text-white text-lg font-medium">{currentQuestion.optionA}</p>
+                </div>
+              </div>
+              
+              <div className="glass-dark rounded-2xl p-6 border-2 border-white/20 hover:border-white/30 transition-all duration-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">B</span>
+                  </div>
+                  <p className="text-white text-lg font-medium">{currentQuestion.optionB}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Round Statistics */}
+            {gameStats.roundStats && (
+              <div className="mt-8 p-6 bg-white/5 rounded-2xl">
+                <h4 className="text-xl font-bold text-white mb-4">当前轮次统计</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-400">{gameStats.roundStats.A_count}</div>
+                    <div className="text-gray-400">选择 A</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-400">{gameStats.roundStats.B_count}</div>
+                    <div className="text-gray-400">选择 B</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-red-400">{gameStats.roundStats.noAnswer_count}</div>
+                    <div className="text-gray-400">未答题</div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* Waiting State */}
-        {!currentQuestion && gameStats.status === 'waiting' && (
+        {!currentQuestion && !showQuestionForm && gameStats.status === 'waiting' && (
           <div className="glass rounded-3xl p-12 text-center animate-scale-in">
             <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <Play className="w-10 h-10 text-blue-400" />
             </div>
             <h3 className="text-2xl font-bold text-white mb-4">准备就绪</h3>
-            <p className="text-gray-400 text-lg">点击"发布下一题"开始游戏或进入下一轮</p>
+            <p className="text-gray-400 text-lg">点击"发布新题目"开始游戏或进入下一轮</p>
           </div>
         )}
 

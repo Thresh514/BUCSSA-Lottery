@@ -33,8 +33,8 @@ export default function LoginPage() {
         >
           {/* Logo */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">BUCSSA 活动抽奖</h1>
-            <p className="text-gray-400">使用 BU 或 Gmail 账户登录</p>
+            <h1 className="text-3xl font-bold text-white mb-2">少数派游戏</h1>
+            <p className="text-gray-300">选择人数较少的选项晋级</p>
           </div>
 
           <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">

@@ -6,17 +6,12 @@ export interface User {
   joinedAt: string;
 }
 
-// 题目相关类型
-export interface Question {
+// 少数派游戏题目类型
+export interface MinorityQuestion {
   id: string;
   question: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-  correct_option: string;
+  optionA: string;
+  optionB: string;
 }
 
 // 游戏状态类型
@@ -32,13 +27,13 @@ export interface GameState {
 
 // WebSocket 消息类型
 export interface SocketMessage {
-  type: 'new_question' | 'round_result' | 'eliminated' | 'game_ended' | 'game_state';
+  type: 'new_question' | 'round_result' | 'eliminated' | 'game_ended' | 'game_state' | 'countdown';
   data: any;
 }
 
 // 新题目消息
 export interface NewQuestionMessage {
-  question: Question;
+  question: MinorityQuestion;
   round: number;
   timeLeft: number;
   survivorsCount: number;
@@ -46,18 +41,39 @@ export interface NewQuestionMessage {
 
 // 轮次结果消息
 export interface RoundResultMessage {
-  correctAnswer: string;
+  minorityOption: 'A' | 'B';
+  minorityCount: number;
+  majorityCount: number;
   eliminatedCount: number;
   survivorsCount: number;
   eliminatedUsers: string[];
+}
+
+// 游戏结束消息
+export interface GameEndedMessage {
+  winner: string | null;
+  winnerEmail: string | null;
+  message: string;
 }
 
 // 答题提交
 export interface AnswerSubmission {
   userId: string;
   questionId: string;
-  selectedOption: string;
+  selectedOption: 'A' | 'B';
   submittedAt: string;
+}
+
+// 轮次统计
+export interface RoundStats {
+  questionId: string;
+  question: string;
+  optionA: string;
+  optionB: string;
+  A_count: number;
+  B_count: number;
+  noAnswer_count: number;
+  totalPlayers: number;
 }
 
 // JWT Payload

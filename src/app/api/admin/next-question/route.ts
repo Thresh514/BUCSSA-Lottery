@@ -1,31 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GameManager } from '@/lib/game';
+import { GameManager, MinorityQuestion } from '@/lib/game';
 
 export async function POST(request: NextRequest) {
   try {
-    const gameManager = new GameManager();
-    
-    // 初始化游戏（如果需要）
-    await gameManager.initializeGame();
-    
-    // 开始新一轮
-    const question = await gameManager.startNewRound();
-    
-    if (!question) {
+    const body = await request.json();
+    const { question, optionA, optionB } = body;
+
+    // 验证必要字段
+    if (!question || !optionA || !optionB) {
       return NextResponse.json(
-        { error: '没有更多题目，游戏已结束' },
+        { error: '请提供题目内容和两个选项' },
         { status: 400 }
       );
     }
 
+    const gameManager = new GameManager();
+    
+    // 创建少数派题目
+    const minorityQuestion: MinorityQuestion = {
+      id: `q_${Date.now()}`,
+      question,
+      optionA,
+      optionB,
+    };
+    
+    // 开始新一轮
+    await gameManager.startNewRound(minorityQuestion);
+
     return NextResponse.json(
       { 
         message: '新题目已发布',
-        question: {
-          id: question.id,
-          question: question.question,
-          options: question.options,
-        }
+        question: minorityQuestion
       },
       { status: 200 }
     );

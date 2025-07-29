@@ -17,18 +17,11 @@ import {
   Target,
   CheckCircle,
   AlertCircle,
-  Crown
+  Crown,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
-
-interface Question {
-  id: string;
-  options: {
-    A: string;
-    B: string;
-    C: string;
-    D: string;
-  };
-}
+import { MinorityQuestion } from '@/types';
 
 interface GameState {
   status: 'waiting' | 'playing' | 'ended';
@@ -49,8 +42,8 @@ export default function PlayPage() {
     survivorsCount: 0,
     eliminatedCount: 0,
   });
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>('');
+  const [currentQuestion, setCurrentQuestion] = useState<MinorityQuestion | null>(null);
+  const [selectedOption, setSelectedOption] = useState<'A' | 'B' | ''>('');
   const [isEliminated, setIsEliminated] = useState(false);
   const [message, setMessage] = useState('');
   const [connected, setConnected] = useState(false);
@@ -109,7 +102,9 @@ export default function PlayPage() {
     });
 
     socket.on('round_result', (data: any) => {
-      setMessage(`正确答案是 ${data.correctAnswer}，本轮淘汰 ${data.eliminatedCount} 人，剩余 ${data.survivorsCount} 人`);
+      const minorityText = data.minorityOption === 'A' ? 'A' : 'B';
+      const majorityText = data.minorityOption === 'A' ? 'B' : 'A';
+      setMessage(`少数派选项是 ${minorityText}（${data.minorityCount}人选择），多数派选项是 ${majorityText}（${data.majorityCount}人选择），本轮淘汰 ${data.eliminatedCount} 人，剩余 ${data.survivorsCount} 人`);
       setGameState(prev => ({
         ...prev,
         status: 'waiting',
@@ -129,6 +124,8 @@ export default function PlayPage() {
       setGameState(prev => ({ ...prev, status: 'ended' }));
       if (data.winner === session.user?.email) {
         setMessage('🎉 恭喜您获得第一名！');
+      } else if (data.winnerEmail) {
+        setMessage(`游戏结束！获胜者是 ${data.winnerEmail}`);
       } else {
         setMessage('游戏结束！');
       }
@@ -143,17 +140,32 @@ export default function PlayPage() {
     };
   }, [router, gameState.eliminatedCount, session, status]);
 
-  const handleSubmitAnswer = (option: string) => {
-    if (!socketRef.current || !currentQuestion || isEliminated) return;
+  const handleSubmitAnswer = async (option: 'A' | 'B') => {
+    if (!currentQuestion || isEliminated || selectedOption) return;
 
     setSelectedOption(option);
     
-    socketRef.current.emit('submit_answer', {
-      questionId: currentQuestion.id,
-      selectedOption: option,
-    });
+    try {
+      const response = await fetch('/api/submit-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ answer: option }),
+      });
 
-    setMessage(`您选择了选项 ${option}`);
+      const data = await response.json();
+      
+      if (response.ok) {
+        setMessage(`您选择了选项 ${option}，请等待结果...`);
+      } else {
+        setMessage(data.error || '提交答案失败');
+        setSelectedOption('');
+      }
+    } catch (error) {
+      setMessage('网络错误，请稍后重试');
+      setSelectedOption('');
+    }
   };
 
   const handleLogout = async () => {
@@ -186,7 +198,7 @@ export default function PlayPage() {
                   <Target className="w-5 h-5 text-black" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">BUCSSA 活动抽奖</h1>
+                  <h1 className="text-xl font-bold text-gray-900">少数派游戏</h1>
                   <div className="flex items-center gap-2">
                     {connected ? (
                       <Wifi className="w-4 h-4 text-green-500" />
@@ -292,40 +304,67 @@ export default function PlayPage() {
                 <Target className="w-4 h-4" />
                 第 {gameState.round} 题
               </div>
-              <h3 className="text-lg text-gray-600 mb-6">
-                请从以下选项中选择一个答案
-              </h3>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                {currentQuestion.question}
+              </h2>
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-6">
+                <TrendingDown className="w-4 h-4" />
+                <span>选择人数较少的选项晋级</span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {Object.entries(currentQuestion.options).map(([key, value]) => (
-                <button
-                  key={key}
-                  onClick={() => handleSubmitAnswer(key)}
-                  disabled={!!selectedOption || gameState.timeLeft <= 0}
-                  className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
-                    selectedOption === key 
-                      ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50' 
-                      : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
-                      selectedOption === key
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700'
-                    }`}>
-                      {key}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="text-gray-900 font-medium">{value}</p>
-                    </div>
-                    {selectedOption === key && (
-                      <CheckCircle className="w-6 h-6 text-purple-500" />
-                    )}
+              <button
+                onClick={() => handleSubmitAnswer('A')}
+                disabled={!!selectedOption || gameState.timeLeft <= 0}
+                className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
+                  selectedOption === 'A' 
+                    ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50' 
+                    : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
+                    selectedOption === 'A'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700'
+                  }`}>
+                    A
                   </div>
-                </button>
-              ))}
+                  <div className="flex-1 text-left">
+                    <p className="text-gray-900 font-medium">{currentQuestion.optionA}</p>
+                  </div>
+                  {selectedOption === 'A' && (
+                    <CheckCircle className="w-6 h-6 text-purple-500" />
+                  )}
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleSubmitAnswer('B')}
+                disabled={!!selectedOption || gameState.timeLeft <= 0}
+                className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
+                  selectedOption === 'B' 
+                    ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50' 
+                    : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
+                    selectedOption === 'B'
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700'
+                  }`}>
+                    B
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-gray-900 font-medium">{currentQuestion.optionB}</p>
+                  </div>
+                  {selectedOption === 'B' && (
+                    <CheckCircle className="w-6 h-6 text-purple-500" />
+                  )}
+                </div>
+              </button>
             </div>
 
             {selectedOption && (

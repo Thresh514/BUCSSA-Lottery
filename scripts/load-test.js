@@ -22,16 +22,16 @@ class SimulatedUser {
   }
 
   // 连接到服务器
-  connect(token) {
+  connect(email) {
     return new Promise((resolve, reject) => {
       this.socket = io(CONFIG.serverUrl, {
-        auth: { token },
+        auth: { email },
       });
 
       this.socket.on('connect', () => {
         this.connected = true;
         this.stats.connectTime = Date.now();
-        console.log(`用户 ${this.id} 已连接`);
+        console.log(`用户 ${this.id} (${email}) 已连接`);
         resolve();
       });
 
@@ -51,35 +51,53 @@ class SimulatedUser {
         this.answerQuestion(data);
       });
 
-      this.socket.on('eliminated', () => {
+      this.socket.on('eliminated', (data) => {
         this.stats.eliminated = true;
-        console.log(`用户 ${this.id} 被淘汰`);
+        console.log(`用户 ${this.id} 被淘汰: ${data.message}`);
       });
 
-      this.socket.on('game_ended', () => {
-        console.log(`用户 ${this.id} 游戏结束`);
+      this.socket.on('game_ended', (data) => {
+        console.log(`用户 ${this.id} 游戏结束: ${data.message}`);
+      });
+
+      this.socket.on('round_result', (data) => {
+        console.log(`用户 ${this.id} 轮次结果: 少数派${data.minorityOption}, 淘汰${data.eliminatedCount}人`);
       });
     });
   }
 
-  // 自动答题 (随机选择答案)
+  // 自动答题 (随机选择A或B)
   answerQuestion(questionData) {
     if (this.stats.eliminated) return;
 
-    const options = ['A', 'B', 'C', 'D'];
+    const options = ['A', 'B'];
     const randomOption = options[Math.floor(Math.random() * options.length)];
     
     // 模拟思考时间 (1-5秒)
     const thinkingTime = Math.random() * 4000 + 1000;
     
-    setTimeout(() => {
+    setTimeout(async () => {
       if (this.connected && !this.stats.eliminated) {
-        this.socket.emit('submit_answer', {
-          questionId: questionData.question.id,
-          selectedOption: randomOption,
-        });
-        this.stats.answersSubmitted++;
-        console.log(`用户 ${this.id} 提交答案: ${randomOption}`);
+        try {
+          // 使用HTTP API提交答案
+          const response = await fetch(`${CONFIG.serverUrl}/api/submit-answer`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ answer: randomOption }),
+          });
+
+          if (response.ok) {
+            this.stats.answersSubmitted++;
+            console.log(`用户 ${this.id} 提交答案: ${randomOption}`);
+          } else {
+            const error = await response.json();
+            console.log(`用户 ${this.id} 提交答案失败: ${error.error}`);
+          }
+        } catch (error) {
+          console.log(`用户 ${this.id} 提交答案网络错误: ${error.message}`);
+        }
       }
     }, thinkingTime);
   }
@@ -103,7 +121,7 @@ class SimulatedUser {
 
 // 主压测函数
 async function runLoadTest() {
-  console.log(`开始压测: ${CONFIG.numClients} 个并发用户`);
+  console.log(`开始少数派游戏压测: ${CONFIG.numClients} 个并发用户`);
   console.log(`测试持续时间: ${CONFIG.testDuration / 1000} 秒`);
   console.log('=' * 50);
 
@@ -124,9 +142,9 @@ async function runLoadTest() {
     await Promise.all(
       batch.map(async (user) => {
         try {
-          // 使用默认token (实际场景中应该是真实的JWT)
-          const mockToken = `mock_token_${user.id}`;
-          await user.connect(mockToken);
+          // 使用模拟邮箱
+          const mockEmail = `user${user.id}@bu.edu`;
+          await user.connect(mockEmail);
         } catch (error) {
           console.error(`用户 ${user.id} 连接失败`);
         }
@@ -148,7 +166,7 @@ async function runLoadTest() {
   const eliminatedUsers = stats.filter(s => s.eliminated);
 
   console.log('\n' + '=' * 50);
-  console.log('压测结果统计:');
+  console.log('少数派游戏压测结果统计:');
   console.log(`总用户数: ${users.length}`);
   console.log(`成功连接: ${connectedUsers.length}`);
   console.log(`连接成功率: ${(connectedUsers.length / users.length * 100).toFixed(2)}%`);
@@ -167,7 +185,7 @@ async function runLoadTest() {
   // 断开所有连接
   users.forEach(user => user.disconnect());
   
-  console.log('\n压测完成!');
+  console.log('\n少数派游戏压测完成!');
   process.exit(0);
 }
 
