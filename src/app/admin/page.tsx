@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatTime } from '@/lib/utils';
@@ -19,6 +21,9 @@ interface GameStats {
 }
 
 export default function AdminPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  
   const [gameStats, setGameStats] = useState<GameStats>({
     totalPlayers: 0,
     survivorsCount: 0,
@@ -42,7 +47,26 @@ export default function AdminPage() {
   
   const socketRef = useRef<Socket | null>(null);
 
+  // 认证检查
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+
+    if (status === 'loading') {
+      return; // 等待认证状态
+    }
+
+    // 检查是否是管理员（这里可以根据需要添加管理员邮箱验证）
+    if (session?.user?.email) {
+      // 管理员认证通过
+    }
+  }, [status, session, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return; // 只有认证后才建立连接
+
     fetchGameStats();
 
     const socket = io();
@@ -50,12 +74,10 @@ export default function AdminPage() {
 
     socket.on('connect', () => {
       setConnected(true);
-      console.log('管理员Socket连接成功');
     });
 
     socket.on('disconnect', () => {
       setConnected(false);
-      console.log('管理员Socket连接断开');
     });
 
     socket.on('game_state', (data: any) => {

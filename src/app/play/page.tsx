@@ -51,13 +51,20 @@ export default function PlayPage() {
   const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
 
+  // 添加调试信息
+  useEffect(() => {
+    // 调试信息已移除
+  }, [status, session]);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
       return;
     }
 
-    if (!session?.user?.email) return;
+    if (!session?.user?.email) {
+      return;
+    }
 
     const socket = io({
       auth: {
@@ -69,12 +76,10 @@ export default function PlayPage() {
 
     socket.on('connect', () => {
       setConnected(true);
-      console.log('Socket连接成功');
     });
 
     socket.on('disconnect', () => {
       setConnected(false);
-      console.log('Socket连接断开');
     });
 
     socket.on('game_state', (data: GameState) => {
@@ -132,6 +137,7 @@ export default function PlayPage() {
     });
 
     socket.on('error', (data: any) => {
+      console.error('Socket 错误:', data);
       setMessage(data.message);
     });
 
@@ -163,6 +169,7 @@ export default function PlayPage() {
         setSelectedOption('');
       }
     } catch (error) {
+      console.error('提交答案错误:', error);
       setMessage('网络错误，请稍后重试');
       setSelectedOption('');
     }
@@ -174,6 +181,11 @@ export default function PlayPage() {
     }
     await signOut({ callbackUrl: '/login' });
   };
+
+  // 显示调试信息
+  if (process.env.NODE_ENV === 'development') {
+    console.log('渲染状态:', { status, session: !!session, user: session?.user || null });
+  }
 
   if (status === 'loading' || !session) {
     return (

@@ -1,7 +1,6 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { redis, RedisKeys } from '@/lib/redis';
-import { env } from '@/lib/env';
 import { GameManager } from './game';
 
 // 全局Socket.IO服务器实例
@@ -14,7 +13,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: env.SITE_URL,
+      origin: process.env.NEXT_PUBLIC_SITE_URL!,
       methods: ['GET', 'POST'],
     },
   });
@@ -48,20 +47,19 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
   // 连接事件处理
   io.on('connection', async (socket) => {
     const user = socket.data.user;
-    console.log(`用户 ${user.email} 已连接`);
 
     // 用户加入游戏房间
-    socket.join(env.DEFAULT_ROOM_ID);
+    const roomId = process.env.DEFAULT_ROOM_ID!;
+    socket.join(roomId);
 
     // 检查用户是否已在游戏中，如果不在则添加到存活列表
     const gameManager = new GameManager();
-    const isInGame = await redis.sismember(RedisKeys.roomSurvivors(env.DEFAULT_ROOM_ID), user.email);
-    const isEliminated = await redis.sismember(RedisKeys.roomEliminated(env.DEFAULT_ROOM_ID), user.email);
+    const isInGame = await redis.sismember(RedisKeys.roomSurvivors(roomId), user.email);
+    const isEliminated = await redis.sismember(RedisKeys.roomEliminated(roomId), user.email);
     
     if (!isInGame && !isEliminated) {
       // 新用户加入游戏
       await gameManager.addPlayer(user.email);
-      console.log(`新用户 ${user.email} 加入游戏`);
     }
 
     // 发送当前游戏状态
@@ -86,7 +84,8 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       }
 
       // 检查用户是否还在存活列表中
-      const isAlive = await redis.sismember(RedisKeys.roomSurvivors(env.DEFAULT_ROOM_ID), user.email);
+      const roomId = process.env.DEFAULT_ROOM_ID!;
+      const isAlive = await redis.sismember(RedisKeys.roomSurvivors(roomId), user.email);
       if (!isAlive) {
         socket.emit('error', { message: '您已被淘汰，无法答题' });
         return;
@@ -99,27 +98,26 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         // 更新用户在线状态
         await redis.set(RedisKeys.userOnline(user.email), '1', 'EX', 300);
 
-        console.log(`用户 ${user.email} 提交答案: ${answer}`);
       } catch (error: any) {
         socket.emit('error', { message: error.message });
       }
     });
 
     // 断开连接处理
-    socket.on('disconnect', async () => {
-      console.log(`用户 ${user.email} 已断开连接`);
-      // 清除用户在线状态
-      await redis.del(RedisKeys.userOnline(user.email));
+    socket.on('disconnect', () => {
+      const user = socket.data.user;
+      if (user) {
+        redis.del(RedisKeys.userOnline(user.email));
+      }
     });
   });
 
-  console.log('Socket.IO 服务器已启动');
   return io;
 }
 
 // 获取游戏状态
 async function getGameState() {
-  const roomId = env.DEFAULT_ROOM_ID;
+  const roomId = process.env.DEFAULT_ROOM_ID!;
   
   const [
     gameState,

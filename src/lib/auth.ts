@@ -1,5 +1,6 @@
 import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { RedisAdapter } from "./redis-adapter";
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -8,26 +9,34 @@ export const authOptions: AuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
+  adapter: RedisAdapter,
+  session: {
+    strategy: "database",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   callbacks: {
     async signIn({ user }) {
       // 只允许 bu.edu 和 gmail.com 的邮箱
       const email = user.email || "";
       const allowed = email.endsWith("@bu.edu") || email.endsWith("@gmail.com");
-      console.log("Sign in attempt:", { email, allowed });
+      
+      if (!allowed) {
+        return false;
+      }
+      
       return allowed;
     },
-    async session({ session, token }) {
-      console.log("Session callback:", { session, token });
+    async session({ session, user }) {
+      // 将用户ID添加到会话中
+      if (user && session.user) {
+        (session.user as any).id = user.id;
+      }
       return session;
-    },
-    async jwt({ token, user }) {
-      console.log("JWT callback:", { token, user });
-      return token;
     },
   },
   pages: {
     signIn: "/login",
     error: "/login",
   },
-  debug: true,
+  debug: false,
 }; 

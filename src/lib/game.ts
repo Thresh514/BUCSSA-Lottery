@@ -1,5 +1,4 @@
 import { redis, RedisKeys } from './redis';
-import { env } from './env';
 import { getSocketIO } from './socket';
 
 // 新的题目结构 - 只有A/B两个选项
@@ -14,7 +13,7 @@ export class GameManager {
   private roomId: string;
   private io: any; // Socket.IO instance
 
-  constructor(roomId: string = env.DEFAULT_ROOM_ID) {
+  constructor(roomId: string = process.env.DEFAULT_ROOM_ID!) {
     this.roomId = roomId;
     this.io = getSocketIO();
   }
@@ -208,8 +207,6 @@ export class GameManager {
         message: winner ? `恭喜 ${winner} 获胜！` : '游戏结束',
       });
     }
-
-    console.log('游戏结束，获胜者:', winner || '无');
   }
 
   // 启动倒计时

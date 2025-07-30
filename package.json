@@ -9,6 +9,7 @@
     "lint": "next lint",
     "start-dev": "./scripts/start-dev.sh",
     "load-test": "node scripts/load-test.js",
+    "view-simple-users": "node scripts/view-simple-users.js",
     "docker:build": "docker build -t lottery-system .",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
@@ -29,7 +30,7 @@
     "nodemailer": "^7.0.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "redis": "^5.6.0",
+    "redis": "^5.6.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.3.1"

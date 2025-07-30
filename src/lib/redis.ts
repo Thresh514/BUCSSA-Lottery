@@ -1,8 +1,27 @@
-import Redis from 'ioredis';
-import { env } from './env';
+import { createClient } from 'redis';
 
-// 创建Redis连接实例
-export const redis = new Redis(env.REDIS_URL);
+// 创建Redis客户端
+const redis = createClient({
+  url: process.env.REDIS_URL!,
+});
+
+// 连接Redis并监听错误和重连事件
+redis.connect().catch(console.error);
+redis.on("error", (err: any) => console.error("Redis Error:", err));
+redis.on("connect", () => {
+  // Redis连接成功
+});
+redis.on("ready", () => {
+  // Redis准备就绪
+});
+redis.on("end", () => {
+  // Redis连接关闭
+});
+redis.on("reconnecting", () => {
+  // Redis正在重连
+});
+
+export { redis };
 
 // Redis key 生成器
 export const RedisKeys = {
@@ -32,4 +51,9 @@ export const RedisKeys = {
   
   // 游戏获胜者
   gameWinner: (roomId: string) => `game:${roomId}:winner`,
+  
+  // NextAuth 用户认证相关
+  nextAuthUser: (userId: string) => `nextauth:user:${userId}`,
+  nextAuthSession: (sessionToken: string) => `nextauth:session:${sessionToken}`,
+  nextAuthVerificationToken: (token: string) => `nextauth:verification_token:${token}`,
 }; 
