@@ -219,6 +219,26 @@ export const RedisAdapter: Adapter = {
       };
       
       const redis = await getRedisClient();
+      
+      // 清理同一用户的旧session
+      if (data.userId) {
+        const existingSessions = await redis.keys("nextauth:session:*");
+        for (const sessionKey of existingSessions) {
+          try {
+            const existingSessionData = await redis.get(sessionKey);
+            if (existingSessionData) {
+              const existingSession = JSON.parse(existingSessionData);
+              if (existingSession.userId === data.userId && existingSession.sessionToken !== data.sessionToken) {
+                // 删除同一用户的旧session
+                await redis.del(sessionKey);
+              }
+            }
+          } catch (error) {
+            // 忽略单个session的解析错误
+          }
+        }
+      }
+      
       await redis.set(
         `nextauth:session:${data.sessionToken}`,
         JSON.stringify(session),
@@ -245,6 +265,26 @@ export const RedisAdapter: Adapter = {
     };
     
     const redis = await getRedisClient();
+    
+    // 清理同一用户的其他session（除了当前正在更新的）
+    if (session.userId) {
+      const existingSessions = await redis.keys("nextauth:session:*");
+      for (const sessionKey of existingSessions) {
+        try {
+          const existingSessionData = await redis.get(sessionKey);
+          if (existingSessionData) {
+            const existingSession = JSON.parse(existingSessionData);
+            if (existingSession.userId === session.userId && existingSession.sessionToken !== data.sessionToken) {
+              // 删除同一用户的其他session
+              await redis.del(sessionKey);
+            }
+          }
+        } catch (error) {
+          // 忽略单个session的解析错误
+        }
+      }
+    }
+    
     await redis.set(
       `nextauth:session:${data.sessionToken}`,
       JSON.stringify(updatedSession),
