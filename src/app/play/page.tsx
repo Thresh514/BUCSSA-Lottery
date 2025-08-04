@@ -1,30 +1,30 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { formatTime } from '@/lib/utils';
-import { io, Socket } from 'socket.io-client';
-import { useSession, signOut } from 'next-auth/react';
-import { 
-  Users, 
-  UserX, 
-  Clock, 
-  Trophy, 
-  Wifi, 
-  WifiOff, 
-  LogOut, 
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { formatTime } from "@/lib/utils";
+import { io, Socket } from "socket.io-client";
+import { useSession, signOut } from "next-auth/react";
+import {
+  Users,
+  UserX,
+  Clock,
+  Trophy,
+  Wifi,
+  WifiOff,
+  LogOut,
   Target,
   CheckCircle,
   AlertCircle,
   Crown,
   TrendingUp,
-  TrendingDown
-} from 'lucide-react';
-import { MinorityQuestion } from '@/types';
+  TrendingDown,
+} from "lucide-react";
+import { MinorityQuestion } from "@/types";
 
 interface GameState {
-  status: 'waiting' | 'playing' | 'ended';
+  status: "waiting" | "playing" | "ended";
   currentQuestionId: string | null;
   round: number;
   timeLeft: number;
@@ -35,19 +35,20 @@ interface GameState {
 export default function PlayPage() {
   const { data: session, status } = useSession();
   const [gameState, setGameState] = useState<GameState>({
-    status: 'waiting',
+    status: "waiting",
     currentQuestionId: null,
     round: 0,
     timeLeft: 0,
     survivorsCount: 0,
     eliminatedCount: 0,
   });
-  const [currentQuestion, setCurrentQuestion] = useState<MinorityQuestion | null>(null);
-  const [selectedOption, setSelectedOption] = useState<'A' | 'B' | ''>('');
+  const [currentQuestion, setCurrentQuestion] =
+    useState<MinorityQuestion | null>(null);
+  const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
   const [isEliminated, setIsEliminated] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [connected, setConnected] = useState(false);
-  
+
   const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
 
@@ -57,8 +58,8 @@ export default function PlayPage() {
   }, [status, session]);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
+    if (status === "unauthenticated") {
+      router.push("/login");
       return;
     }
 
@@ -66,7 +67,7 @@ export default function PlayPage() {
       return;
     }
 
-    const socket = io({
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
       auth: {
         email: session.user.email,
       },
@@ -74,70 +75,72 @@ export default function PlayPage() {
 
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    socket.on("connect", () => {
       setConnected(true);
     });
 
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
       setConnected(false);
     });
 
-    socket.on('game_state', (data: GameState) => {
+    socket.on("game_state", (data: GameState) => {
       setGameState(data);
     });
 
-    socket.on('new_question', (data: any) => {
+    socket.on("new_question", (data: any) => {
       setCurrentQuestion(data.question);
-      setSelectedOption('');
-      setGameState(prev => ({
+      setSelectedOption("");
+      setGameState((prev) => ({
         ...prev,
-        status: 'playing',
+        status: "playing",
         round: data.round,
         timeLeft: data.timeLeft,
         survivorsCount: data.survivorsCount,
       }));
-      setMessage('');
+      setMessage("");
     });
 
-    socket.on('countdown', (data: { timeLeft: number }) => {
-      setGameState(prev => ({
+    socket.on("countdown", (data: { timeLeft: number }) => {
+      setGameState((prev) => ({
         ...prev,
         timeLeft: data.timeLeft,
       }));
     });
 
-    socket.on('round_result', (data: any) => {
-      const minorityText = data.minorityOption === 'A' ? 'A' : 'B';
-      const majorityText = data.minorityOption === 'A' ? 'B' : 'A';
-      setMessage(`少数派选项是 ${minorityText}（${data.minorityCount}人选择），多数派选项是 ${majorityText}（${data.majorityCount}人选择），本轮淘汰 ${data.eliminatedCount} 人，剩余 ${data.survivorsCount} 人`);
-      setGameState(prev => ({
+    socket.on("round_result", (data: any) => {
+      const minorityText = data.minorityOption === "A" ? "A" : "B";
+      const majorityText = data.minorityOption === "A" ? "B" : "A";
+      setMessage(
+        `少数派选项是 ${minorityText}（${data.minorityCount}人选择），多数派选项是 ${majorityText}（${data.majorityCount}人选择），本轮淘汰 ${data.eliminatedCount} 人，剩余 ${data.survivorsCount} 人`
+      );
+      setGameState((prev) => ({
         ...prev,
-        status: 'waiting',
+        status: "waiting",
         survivorsCount: data.survivorsCount,
         eliminatedCount: gameState.eliminatedCount + data.eliminatedCount,
       }));
     });
 
-    socket.on('eliminated', (data: any) => {
+    socket.on("eliminated", (data: any) => {
       if (data.userId === session.user?.email) {
         setIsEliminated(true);
-        setMessage('很遗憾，您已被淘汰！');
+        setMessage("很遗憾，您已被淘汰！");
       }
     });
 
-    socket.on('game_ended', (data: any) => {
-      setGameState(prev => ({ ...prev, status: 'ended' }));
+    socket.on("game_ended", (data: any) => {
+      setGameState((prev) => ({ ...prev, status: "ended" }));
       if (data.winner === session.user?.email) {
-        setMessage('🎉 恭喜您获得第一名！');
+        setMessage("🎉 恭喜您获得第一名！");
       } else if (data.winnerEmail) {
         setMessage(`游戏结束！获胜者是 ${data.winnerEmail}`);
       } else {
-        setMessage('游戏结束！');
+        setMessage("游戏结束！");
       }
     });
 
-    socket.on('error', (data: any) => {
-      console.error('Socket 错误:', data);
+    socket.on("error", (data: any) => {
+      console.error("Socket 错误:", data);
       setMessage(data.message);
     });
 
@@ -146,32 +149,32 @@ export default function PlayPage() {
     };
   }, [router, gameState.eliminatedCount, session, status]);
 
-  const handleSubmitAnswer = async (option: 'A' | 'B') => {
+  const handleSubmitAnswer = async (option: "A" | "B") => {
     if (!currentQuestion || isEliminated || selectedOption) return;
 
     setSelectedOption(option);
-    
+
     try {
-      const response = await fetch('/api/submit-answer', {
-        method: 'POST',
+      const response = await fetch("/api/submit-answer", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ answer: option }),
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         setMessage(`您选择了选项 ${option}，请等待结果...`);
       } else {
-        setMessage(data.error || '提交答案失败');
-        setSelectedOption('');
+        setMessage(data.error || "提交答案失败");
+        setSelectedOption("");
       }
     } catch (error) {
-      console.error('提交答案错误:', error);
-      setMessage('网络错误，请稍后重试');
-      setSelectedOption('');
+      console.error("提交答案错误:", error);
+      setMessage("网络错误，请稍后重试");
+      setSelectedOption("");
     }
   };
 
@@ -179,15 +182,19 @@ export default function PlayPage() {
     if (socketRef.current) {
       socketRef.current.disconnect();
     }
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ callbackUrl: "/login" });
   };
 
   // 显示调试信息
-  if (process.env.NODE_ENV === 'development') {
-    console.log('渲染状态:', { status, session: !!session, user: session?.user || null });
+  if (process.env.NODE_ENV === "development") {
+    console.log("渲染状态:", {
+      status,
+      session: !!session,
+      user: session?.user || null,
+    });
   }
 
-  if (status === 'loading' || !session) {
+  if (status === "loading" || !session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -210,31 +217,37 @@ export default function PlayPage() {
                   <Target className="w-5 h-5 text-black" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">少数派游戏</h1>
+                  <h1 className="text-xl font-bold text-gray-900">
+                    少数派游戏
+                  </h1>
                   <div className="flex items-center gap-2">
                     {connected ? (
                       <Wifi className="w-4 h-4 text-green-500" />
                     ) : (
                       <WifiOff className="w-4 h-4 text-red-500" />
                     )}
-                    <span className={`text-xs font-medium ${
-                      connected ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {connected ? '已连接' : '连接中...'}
+                    <span
+                      className={`text-xs font-medium ${
+                        connected ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {connected ? "已连接" : "连接中..."}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
                 <p className="text-sm text-gray-600">欢迎回来</p>
-                <p className="text-sm font-medium text-gray-900">{session?.user?.email}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {session?.user?.email}
+                </p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleLogout}
                 className="rounded-2xl text-black"
               >
@@ -255,7 +268,9 @@ export default function PlayPage() {
                 <Trophy className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-600">{gameState.round}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {gameState.round}
+                </p>
                 <p className="text-sm text-gray-600">当前轮次</p>
               </div>
             </div>
@@ -267,7 +282,13 @@ export default function PlayPage() {
                 <Clock className="w-6 h-6 text-orange-600" />
               </div>
               <div>
-                <p className={`text-2xl font-bold ${gameState.timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-orange-600'}`}>
+                <p
+                  className={`text-2xl font-bold ${
+                    gameState.timeLeft <= 10
+                      ? "text-red-600 animate-pulse"
+                      : "text-orange-600"
+                  }`}
+                >
                   {formatTime(gameState.timeLeft)}
                 </p>
                 <p className="text-sm text-gray-600">剩余时间</p>
@@ -283,22 +304,26 @@ export default function PlayPage() {
               <UserX className="w-8 h-8 text-red-600" />
             </div>
             <h2 className="text-xl font-bold text-red-900 mb-2">您已被淘汰</h2>
-            <p className="text-red-700">感谢您的参与，请继续观看其他玩家的比赛！</p>
+            <p className="text-red-700">
+              感谢您的参与，请继续观看其他玩家的比赛！
+            </p>
           </div>
         )}
 
         {/* Game Status Cards */}
-        {gameState.status === 'waiting' && !isEliminated && (
+        {gameState.status === "waiting" && !isEliminated && (
           <div className="bg-white/80 border border-gray-200/50 rounded-2xl p-6 text-center">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Clock className="w-8 h-8 text-blue-600" />
             </div>
             <h2 className="text-lg font-bold text-blue-900 mb-2">等待下一题</h2>
-            <p className="text-blue-700 text-sm">请耐心等待管理员发布下一题...</p>
+            <p className="text-blue-700 text-sm">
+              请耐心等待管理员发布下一题...
+            </p>
           </div>
         )}
 
-        {gameState.status === 'ended' && (
+        {gameState.status === "ended" && (
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 text-center animate-slide-up">
             <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Crown className="w-8 h-8 text-yellow-600" />
@@ -309,12 +334,11 @@ export default function PlayPage() {
         )}
 
         {/* Question Area */}
-        {currentQuestion && gameState.status === 'playing' && !isEliminated && (
+        {currentQuestion && gameState.status === "playing" && !isEliminated && (
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-8 animate-slide-up">
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-primary text-black rounded-full text-sm font-medium mb-4">
-                <Target className="w-4 h-4" />
-                第 {gameState.round} 题
+                <Target className="w-4 h-4" />第 {gameState.round} 题
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 {currentQuestion.question}
@@ -327,52 +351,60 @@ export default function PlayPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <button
-                onClick={() => handleSubmitAnswer('A')}
+                onClick={() => handleSubmitAnswer("A")}
                 disabled={!!selectedOption || gameState.timeLeft <= 0}
                 className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
-                  selectedOption === 'A' 
-                    ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50' 
-                    : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30'
+                  selectedOption === "A"
+                    ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"
+                    : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30"
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
-                    selectedOption === 'A'
-                      ? 'bg-purple-500 text-white'
-                      : 'bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700'
-                  }`}>
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
+                      selectedOption === "A"
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700"
+                    }`}
+                  >
                     A
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-gray-900 font-medium">{currentQuestion.optionA}</p>
+                    <p className="text-gray-900 font-medium">
+                      {currentQuestion.optionA}
+                    </p>
                   </div>
-                  {selectedOption === 'A' && (
+                  {selectedOption === "A" && (
                     <CheckCircle className="w-6 h-6 text-purple-500" />
                   )}
                 </div>
               </button>
 
               <button
-                onClick={() => handleSubmitAnswer('B')}
+                onClick={() => handleSubmitAnswer("B")}
                 disabled={!!selectedOption || gameState.timeLeft <= 0}
                 className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
-                  selectedOption === 'B' 
-                    ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50' 
-                    : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30'
+                  selectedOption === "B"
+                    ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"
+                    : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30"
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
-                    selectedOption === 'B'
-                      ? 'bg-purple-500 text-white'
-                      : 'bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700'
-                  }`}>
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
+                      selectedOption === "B"
+                        ? "bg-purple-500 text-white"
+                        : "bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700"
+                    }`}
+                  >
                     B
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-gray-900 font-medium">{currentQuestion.optionB}</p>
+                    <p className="text-gray-900 font-medium">
+                      {currentQuestion.optionB}
+                    </p>
                   </div>
-                  {selectedOption === 'B' && (
+                  {selectedOption === "B" && (
                     <CheckCircle className="w-6 h-6 text-purple-500" />
                   )}
                 </div>
@@ -383,7 +415,9 @@ export default function PlayPage() {
               <div className="text-center p-4 bg-green-50 border border-green-200 rounded-xl animate-scale-in">
                 <div className="flex items-center justify-center gap-2 text-green-800">
                   <CheckCircle className="w-5 h-5" />
-                  <span className="font-medium">您已选择选项 {selectedOption}，请等待结果...</span>
+                  <span className="font-medium">
+                    您已选择选项 {selectedOption}，请等待结果...
+                  </span>
                 </div>
               </div>
             )}
@@ -402,4 +436,4 @@ export default function PlayPage() {
       </main>
     </div>
   );
-} 
+}
