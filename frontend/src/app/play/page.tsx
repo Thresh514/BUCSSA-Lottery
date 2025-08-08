@@ -54,16 +54,35 @@ export default function PlayPage() {
 
   // 添加调试信息
   useEffect(() => {
-    // 调试信息已移除
-  }, [status, session]);
-
-  useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
       return;
     }
 
+    if (status === "loading") {
+      return; // 等待认证状态
+    }
+
     if (!session?.user?.email) {
+      return;
+    }
+
+    if (session.user.isAdmin) {
+      router.push("/admin");
+      return;
+    }
+  }, [status, session]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      return;
+    }
+
+    if (!session?.user?.email) {
+      return;
+    }
+
+    if (session.user.isAdmin) {
       return;
     }
 

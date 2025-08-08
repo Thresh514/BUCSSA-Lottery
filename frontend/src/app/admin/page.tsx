@@ -67,34 +67,42 @@ export default function AdminPage() {
 
   // 认证检查
   useEffect(() => {
-    //if (status === 'unauthenticated') {
-    //  router.push('/login');
-    //  return;
-    //}
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
 
     if (status === "loading") {
       return; // 等待认证状态
     }
 
-    // 检查是否是管理员（这里可以根据需要添加管理员邮箱验证）
-    if (session?.user?.email) {
-      // 管理员认证通过
+    if (!session?.user?.email) {
+      return;
+    }
+
+    if (!session?.user?.isAdmin) {
+      router.push("/play"); // 非管理员重定向到首页
+      return;
     }
   }, [status, session, router]);
 
   useEffect(() => {
-    // if (status !== "authenticated") return; // 只有认证后才建立连接
+    if (status !== "authenticated") return; // 只有认证后才建立连接
 
-    // if (!session?.user?.email) {
-    //   return;
-    // }
+    if (!session?.user?.email) {
+      return;
+    }
+
+    if (!session.user.isAdmin) {
+      return;
+    }
 
     fetchGameStats();
 
     const socket = io(process.env.NEXT_PUBLIC_API_BASE!, {
-      // auth: {
-      //   email: session.user.email,
-      // },
+      auth: {
+        email: session.user.email,
+      },
     });
     socketRef.current = socket;
 

@@ -29,7 +29,16 @@ export const authOptions: AuthOptions = {
     async session({ session, user }) {
       // 将用户ID添加到会话中
       if (user && session.user) {
-        (session.user as any).id = user.id;
+        session.user.id = user.id;
+        
+        // 检查是否是管理员
+        try {
+          const isAdmin = await RedisAdapter.isAdminEmail(user.email || "");
+          session.user.isAdmin = !!isAdmin;
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+          session.user.isAdmin = false;
+        }
       }
       return session;
     },

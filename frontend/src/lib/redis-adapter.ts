@@ -45,7 +45,7 @@ async function getUser(id: string): Promise<AdapterUser | null> {
   }
 }
 
-export const RedisAdapter: Adapter = {
+export const RedisAdapter: Adapter & { isAdminEmail: (email: string) => Promise<boolean> } = {
   // 获取会话和用户
   async getSessionAndUser(sessionToken: string) {
     try {
@@ -322,4 +322,12 @@ export const RedisAdapter: Adapter = {
     }
     return null;
   },
+
+  // 一下均为特殊方法，非 Adapter 标准方法
+  // 检查邮箱是否是管理员
+  async isAdminEmail(email: string): Promise<boolean> {
+    const redis = await getRedisClient();
+    const result = await redis.sIsMember("nextauth:admin_emails", email);
+    return result === 1;
+  }
 };
