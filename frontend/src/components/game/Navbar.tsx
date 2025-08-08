@@ -1,6 +1,6 @@
-import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 export default function Navbar() {
   return (
@@ -13,8 +13,8 @@ export default function Navbar() {
             </div>
             <span className="text-2xl font-bold text-white">少数派游戏</span>
           </div>
-          
-          <Button 
+
+          {/* <Button 
             variant="outline" 
             size="sm" 
             onClick={() => signOut({ callbackUrl: '/login' })}
@@ -22,9 +22,9 @@ export default function Navbar() {
           >
             <LogOut className="w-4 h-4 mr-2 text-black" />
             退出
-          </Button>
+          </Button> */}
         </div>
       </div>
     </nav>
   );
-} 
+}

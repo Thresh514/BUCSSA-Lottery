@@ -67,7 +67,7 @@ export default function PlayPage() {
       return;
     }
 
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
+    const socket = io(process.env.NEXT_PUBLIC_API_BASE!, {
       auth: {
         email: session.user.email,
       },
@@ -155,16 +155,19 @@ export default function PlayPage() {
     setSelectedOption(option);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/submit-answer`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          answer: option,
-          userEmail: session?.user?.email 
-        }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE}/api/submit-answer`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            answer: option,
+            userEmail: session?.user?.email,
+          }),
+        }
+      );
 
       const data = await response.json();
 
