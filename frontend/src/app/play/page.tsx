@@ -210,14 +210,14 @@ export default function PlayPage() {
     await signOut({ callbackUrl: "/login" });
   };
 
-  // 显示调试信息
-  if (process.env.NODE_ENV === "development") {
-    console.log("渲染状态:", {
-      status,
-      session: !!session,
-      user: session?.user || null,
-    });
-  }
+  // // 显示调试信息
+  // if (process.env.NODE_ENV === "development") {
+  //   console.log("渲染状态:", {
+  //     status,
+  //     session: !!session,
+  //     user: session?.user || null,
+  //   });
+  // }
 
   if (status === "loading" || !session) {
     return (
