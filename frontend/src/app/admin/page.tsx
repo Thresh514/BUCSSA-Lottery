@@ -2,30 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatTime } from "@/lib/utils";
 import { io, Socket } from "socket.io-client";
-import {
-  Play,
-  RotateCcw,
-  Users,
-  UserX,
-  Clock,
-  Trophy,
-  Wifi,
-  WifiOff,
-  Target,
-  Activity,
-  BarChart3,
-  Zap,
-  Crown,
-  AlertTriangle,
-  Plus,
-  X,
-} from "lucide-react";
+import { Play, RotateCcw, Users, UserX, Clock, Trophy, Wifi, WifiOff, Target, Activity, BarChart3, Zap, Crown, AlertTriangle, Plus, X, LogOut } from "lucide-react";
 import { MinorityQuestion, RoundStats } from "@/types";
+import { AlertBox } from "@/components/ui/alert-box";
 
 interface GameStats {
   totalPlayers: number;
@@ -62,6 +46,7 @@ export default function AdminPage() {
     optionB: "",
   });
   const [showQuestionForm, setShowQuestionForm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -252,6 +237,10 @@ export default function AdminPage() {
     }
   };
 
+  const handleLogout = () => {
+    signOut({ callbackUrl: "/" });
+  };
+
   const getStatusColor = () => {
     switch (gameStats.status) {
       case "playing":
@@ -337,6 +326,13 @@ export default function AdminPage() {
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 重置游戏
+              </Button>
+
+              <Button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="h-12 px-4 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-xl font-medium transition-all duration-200 hover-lift"
+              >
+                <LogOut className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -621,6 +617,18 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Logout Confirmation Alert Box */}
+      <AlertBox
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="确认退出"
+        message="您确定要退出登录吗？退出后将返回主界面。"
+        confirmText="退出登录"
+        cancelText="取消"
+        confirmVariant="destructive"
+      />
     </div>
   );
 }
