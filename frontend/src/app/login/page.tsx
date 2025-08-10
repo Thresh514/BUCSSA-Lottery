@@ -1,14 +1,33 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // 检查登录状态并重定向
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      if (session.user.isAdmin) {
+        console.log('👑 Admin user detected, redirecting to /admin');
+        router.push('/admin');
+      } else {
+        console.log('👤 Regular user detected, redirecting to /play');
+        router.push('/play');
+      }
+    }
+  }, [session, status, router]);
+
   const handleGoogleSignIn = async () => {
-    await signIn('google', { callbackUrl: '/play' });
+    // 移除硬编码的 callbackUrl，让 NextAuth 根据用户身份自动重定向
+    await signIn('google');
   };
 
   return (
