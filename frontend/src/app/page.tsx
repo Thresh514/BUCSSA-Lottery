@@ -23,7 +23,7 @@ export default function Home() {
       />
       
       {/* 导航栏 */}
-      {/* <Navbar /> */}
+      <Navbar />
       
       {/* 主要内容 */}
       <HeroSection
