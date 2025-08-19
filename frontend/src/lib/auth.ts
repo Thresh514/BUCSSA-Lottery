@@ -47,22 +47,25 @@ export const authOptions: AuthOptions = {
           // Use token.sub instead of user.id
           token.id = token.sub || user.id || "";
           
-          console.log("🔍 Checking admin status for:", user.email);
+          console.log("🔍 Checking admin and display status for:", user.email);
 
           const isAdmin = await RedisAdapter.isAdminEmail(user.email || "");
+          const isDisplay = await RedisAdapter.isDisplayEmail(user.email || "");
           token.isAdmin = isAdmin;
+          token.isDisplay = isDisplay;
           
-          console.log("👑 Admin check result:", { email: user.email, isAdmin });
+          console.log("👑 Role check result:", { email: user.email, isAdmin, isDisplay });
 
         } catch (error) {
 
           console.error("❌ JWT callback error:", error);
           // Don't fail the whole authentication - set defaults
           token.isAdmin = false;
+          token.isDisplay = false;
         }
       }
 
-      console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin });
+      console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin, isDisplay: token.isDisplay });
       
       return token;
     },
@@ -72,6 +75,7 @@ export const authOptions: AuthOptions = {
       console.log("📱 Session callback triggered:", { 
         tokenId: token.id, 
         tokenIsAdmin: token.isAdmin,
+        tokenIsDisplay: token.isDisplay,
         tokenEmail: token.email 
       });
 
@@ -79,6 +83,7 @@ export const authOptions: AuthOptions = {
       if (token && session.user) {
         session.user.id = String(token.sub || token.id || "");
         session.user.isAdmin = Boolean(token.isAdmin);
+        session.user.isDisplay = Boolean(token.isDisplay);
       }
 
       console.log("📱 Session callback complete:", session.user);
@@ -95,7 +100,7 @@ export const authOptions: AuthOptions = {
         // 但是在这个回调中我们无法直接访问用户信息
         // 所以我们需要使用其他方法
         console.log("🔄 Login flow detected, will handle redirect in middleware");
-        return `${baseUrl}/play`; // 临时重定向到 /play，让 middleware 处理
+        return `${baseUrl}/play`; // 临时重定向到 /play，让 middleware 处理具体的角色重定向
       }
       
       // 如果是相对URL，转换为绝对URL

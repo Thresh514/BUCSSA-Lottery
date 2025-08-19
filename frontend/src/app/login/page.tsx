@@ -18,6 +18,9 @@ export default function LoginPage() {
       if (session.user.isAdmin) {
         console.log('👑 Admin user detected, redirecting to /admin');
         router.push('/admin');
+      } else if (session.user.isDisplay) {
+        console.log('📺 Display user detected, redirecting to /show');
+        router.push('/show');
       } else {
         console.log('👤 Regular user detected, redirecting to /play');
         router.push('/play');

@@ -16,10 +16,20 @@ export default withAuth(
       }
     }
 
-    // Redirect admins away from play page
+    // Protect display routes
+    if (pathname.startsWith('/show')) {
+      if (!token?.isDisplay) {
+        return NextResponse.redirect(new URL('/play', req.url))
+      }
+    }
+
+    // Redirect users based on their roles
     if (pathname.startsWith('/play')) {
       if (token?.isAdmin) {
         return NextResponse.redirect(new URL('/admin', req.url))
+      }
+      if (token?.isDisplay) {
+        return NextResponse.redirect(new URL('/show', req.url))
       }
     }
 
@@ -38,7 +48,7 @@ export default withAuth(
         }
 
         // Require authentication for protected routes
-        if (pathname.startsWith('/admin') || pathname.startsWith('/play')) {
+        if (pathname.startsWith('/admin') || pathname.startsWith('/play') || pathname.startsWith('/show')) {
           return !!token
         }
 
@@ -49,6 +59,6 @@ export default withAuth(
 )
 
 export const config = {
-  matcher: ['/admin', '/play', '/login']
+  matcher: ['/admin', '/play', '/show', '/login']
   // matcher: ["/((?!_next|.*\\..*).*)"]
 }
