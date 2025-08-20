@@ -38,9 +38,14 @@ async function getUser(id: string): Promise<AdapterUser | null> {
   try {
     const redis = await getRedisClient();
     const user = await redis.get(`nextauth:user:${id}`);
-    return user ? JSON.parse(user) : null;
+    if (user) {
+      const userData = JSON.parse(user);
+      console.log("👤 Retrieved user:", { id, email: userData.email, hasAccounts: !!userData.accounts });
+      return userData;
+    }
+    return null;
   } catch (error) {
-    console.error('Error getting user:', error);
+    console.error('❌ Error getting user:', error, 'User ID:', id);
     return null;
   }
 }
@@ -84,7 +89,11 @@ export const RedisAdapter: Adapter & {
   async createUser(data: any): Promise<AdapterUser> {
     const redis = await getRedisClient();
     const id = data.id || `user_${Date.now()}`;
-    const user = { ...data, id };
+    // ✅ 初始化 accounts 数组，确保 linkAccount 能正常工作
+    const user = { ...data, id, accounts: [] };
+    
+    console.log("👤 Creating user:", { id, email: user.email, accounts: user.accounts });
+    
     await redis.set(`nextauth:user:${id}`, JSON.stringify(user));
     // 建立邮箱到userId的索引，便于快速查找
     if (user.email) {
@@ -123,24 +132,39 @@ export const RedisAdapter: Adapter & {
 
   // 通过账户获取用户
   async getUserByAccount(providerAccountId: { provider: string; providerAccountId: string }): Promise<AdapterUser | null> {
+    console.log("🔍 getUserByAccount checking:", providerAccountId);
+    
     const redis = await getRedisClient();
     const keys = await redis.keys("nextauth:user:*");
+    console.log("🔍 Found user keys:", keys.length);
+    
     for (const key of keys) {
       const user = await redis.get(key);
       if (user) {
-        const userData = JSON.parse(user);
-        if (userData.accounts) {
-          const account = userData.accounts.find(
-            (acc: any) =>
-              acc.provider === providerAccountId.provider &&
-              acc.providerAccountId === providerAccountId.providerAccountId
-          );
-          if (account) {
-            return userData;
+        try {
+          const userData = JSON.parse(user);
+          console.log("🔍 Checking user:", { id: userData.id, email: userData.email, hasAccounts: !!userData.accounts, accountsCount: userData.accounts?.length || 0 });
+          
+          if (userData.accounts && Array.isArray(userData.accounts)) {
+            const account = userData.accounts.find(
+              (acc: any) =>
+                acc.provider === providerAccountId.provider &&
+                acc.providerAccountId === providerAccountId.providerAccountId
+            );
+            if (account) {
+              console.log("✅ Found matching account for user:", userData.id);
+              return userData as AdapterUser;
+            }
+          } else {
+            console.log("⚠️ User has no accounts array:", userData.id);
           }
+        } catch (error) {
+          console.error("❌ Error parsing user data:", error, "Key:", key);
         }
       }
     }
+    
+    console.log("❌ No user found for account:", providerAccountId);
     return null;
   },
 
@@ -149,7 +173,15 @@ export const RedisAdapter: Adapter & {
     const user = await getUser(data.id);
     if (!user) throw new Error("User not found");
 
-    const updatedUser = { ...user, ...data };
+    // ✅ 确保保留现有的 accounts 数组，使用类型断言
+    const updatedUser = { 
+      ...user, 
+      ...data,
+      accounts: (user as any).accounts || [] // 使用类型断言避免 TypeScript 错误
+    };
+    
+    console.log("🔄 Updating user:", { id: data.id, accountsCount: updatedUser.accounts?.length || 0 });
+    
     const redis = await getRedisClient();
     await redis.set(`nextauth:user:${data.id}`, JSON.stringify(updatedUser));
     // 如果邮箱变更，更新索引
@@ -172,14 +204,19 @@ export const RedisAdapter: Adapter & {
 
   // 链接账户
   async linkAccount(data: any): Promise<AdapterAccount> {
+    console.log("🔗 Linking account:", data);
+    
     const user = await getUser(data.userId);
     if (!user) throw new Error("User not found");
 
-    // 扩展用户类型以包含 accounts
-    const userWithAccounts = user as AdapterUser & { accounts?: AdapterAccount[] };
-    const accounts = userWithAccounts.accounts || [];
+    // 使用类型断言来访问 accounts 属性
+    const userWithAccounts = user as any;
+    const accounts = userWithAccounts.accounts ?? []; // ✅ 使用 ?? 而不是 ||
     accounts.push(data);
     const updatedUser = { ...userWithAccounts, accounts };
+    
+    console.log("🔗 Updated user accounts:", { userId: data.userId, accountsCount: accounts.length });
+    
     const redis = await getRedisClient();
     await redis.set(`nextauth:user:${data.userId}`, JSON.stringify(updatedUser));
     return data;
