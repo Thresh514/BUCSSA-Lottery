@@ -94,29 +94,7 @@ export const authOptions: AuthOptions = {
     async redirect({ url, baseUrl }) {
       console.log("🔄 Redirect callback:", { url, baseUrl });
       
-      // 检查是否是登录后的重定向
-      if (url.includes('/api/auth/signin') || url.includes('/api/auth/callback')) {
-        // 这是登录流程，我们需要根据用户身份决定重定向地址
-        // 但是在这个回调中我们无法直接访问用户信息
-        // 所以我们需要使用其他方法
-        console.log("🔄 Login flow detected, will handle redirect in middleware");
-        return `${baseUrl}/play`; // 临时重定向到 /play，让 middleware 处理具体的角色重定向
-      }
-      
-      // 如果是相对URL，转换为绝对URL
-      if (url.startsWith("/")) {
-        const fullUrl = `${baseUrl}${url}`;
-        console.log("🔄 Redirecting to:", fullUrl);
-        return fullUrl;
-      }
-      // 如果是同域URL，允许
-      else if (new URL(url).origin === baseUrl) {
-        console.log("🔄 Redirecting to:", url);
-        return url;
-      }
-      // 默认返回baseUrl
-      console.log("🔄 Default redirect to:", baseUrl);
-      return baseUrl;
+      return `${baseUrl}/play`;
     },
   },
   pages: {
