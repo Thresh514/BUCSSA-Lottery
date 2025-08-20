@@ -18,6 +18,9 @@ export default function LoginPage() {
       if (session.user.isAdmin) {
         console.log('👑 Admin user detected, redirecting to /admin');
         router.push('/admin');
+      } else if (session.user.isDisplay) {
+        console.log('📺 Display user detected, redirecting to /show');
+        router.push('/show');
       } else {
         console.log('👤 Regular user detected, redirecting to /play');
         router.push('/play');
@@ -51,9 +54,8 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           {/* Logo */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">少数派游戏</h1>
-            <p className="text-gray-300">选择人数较少的选项晋级</p>
+          <div className="text-center mb-4">
+            <h1 className="text-3xl font-bold text-white">登录</h1>
           </div>
 
           <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
@@ -74,7 +76,7 @@ export default function LoginPage() {
 
             {/* 提示信息 */}
             <p className="text-sm text-gray-400 text-center mt-4">
-              仅支持 BU.EDU 和 Gmail 邮箱登录
+              仅支持 Gmail 邮箱登录
             </p>
 
           </div>
