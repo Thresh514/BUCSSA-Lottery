@@ -19,6 +19,12 @@ declare module "next-auth" {
     image?: string | null
     isAdmin?: boolean
     isDisplay?: boolean
+    accounts?: Array<{
+      provider: string
+      providerAccountId: string
+      type: string
+      userId: string
+    }>
   }
 }
 
@@ -27,5 +33,22 @@ declare module "next-auth/jwt" {
     id: string
     isAdmin?: boolean
     isDisplay?: boolean
+  }
+}
+
+declare module "next-auth/adapters" {
+  interface AdapterUser {
+    id: string
+    name?: string | null
+    email?: string | null
+    image?: string | null
+    isAdmin?: boolean
+    isDisplay?: boolean
+    accounts?: Array<{
+      provider: string
+      providerAccountId: string
+      type: string
+      userId: string
+    }>
   }
 }
