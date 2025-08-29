@@ -99,6 +99,14 @@ export default function PlayPage() {
       setConnected(false);
     });
 
+    socket.on("game_start", (data: GameState) => {
+      setGameState(data);
+      setCurrentQuestion(null);
+      setSelectedOption("");
+      setIsEliminated(false);
+      setMessage("");
+    });
+
     socket.on("game_state", (data: GameState) => {
       console.log("Received question:", data.currentQuestion);
       setGameState(data);
@@ -458,14 +466,14 @@ export default function PlayPage() {
         )}
 
         {/* Message Display */}
-        {message && (
+        {/* {message && (
           <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 text-center animate-scale-in">
             <div className="flex items-center justify-center gap-2 text-gray-700">
               <AlertCircle className="w-5 h-5" />
               <span className="font-medium">{message}</span>
             </div>
           </div>
-        )}
+        )} */}
       </main>
     </div>
   );
