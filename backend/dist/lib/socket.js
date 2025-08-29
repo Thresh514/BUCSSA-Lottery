@@ -17,7 +17,6 @@ export function initializeSocketIO(httpServer) {
     // 中间件：验证用户邮箱
     io.use(async (socket, next) => {
         try {
-            console.log('收到连接请求:', socket.handshake.auth);
             const email = socket.handshake.auth.email;
             if (!email) {
                 return next(new Error('未提供邮箱'));
@@ -39,7 +38,6 @@ export function initializeSocketIO(httpServer) {
     });
     // 连接事件处理
     io.on('connection', async (socket) => {
-        console.log(`用户 ${socket.data.user.email} 已连接`);
         const user = socket.data.user;
         // 用户加入游戏房间
         const roomId = process.env.DEFAULT_ROOM_ID;
@@ -53,17 +51,13 @@ export function initializeSocketIO(httpServer) {
             await gameManager.addPlayer(user.email);
         }
         // 发送当前游戏状态
-        const gameState = await getGameState();
-        socket.emit('game_state', gameState);
+        const gameState = await gameManager.getGameState();
         socket.emit('game_state', gameState);
         if (gameState.status === 'playing' && gameState.currentQuestion) {
-            console.log("runningggg");
             try {
                 const questionId = gameState.currentQuestion.id;
                 const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
-                console.log("userAnswer", userAnswer);
                 if (userAnswer) {
-                    console.log("Emitting user_answer event");
                     socket.emit('user_answer', {
                         questionId,
                         answer: userAnswer,
@@ -115,28 +109,6 @@ export function initializeSocketIO(httpServer) {
         });
     });
     return io;
-}
-// 获取游戏状态
-async function getGameState() {
-    const roomId = process.env.DEFAULT_ROOM_ID;
-    const [gameState, currentQuestion, survivorsCount, eliminatedCount, currentRound, onlineUsers] = await Promise.all([
-        redis.hGetAll(RedisKeys.gameState(roomId)),
-        redis.hGetAll(RedisKeys.currentQuestion(roomId)),
-        redis.sCard(RedisKeys.roomSurvivors(roomId)),
-        redis.sCard(RedisKeys.roomEliminated(roomId)),
-        redis.get(RedisKeys.currentRound(roomId)),
-        redis.keys(RedisKeys.userOnline('*')),
-    ]);
-    return {
-        status: gameState.status || 'waiting',
-        currentQuestion: currentQuestion || null,
-        round: parseInt(currentRound || '0'),
-        timeLeft: parseInt(gameState.timeLeft || '0'),
-        totalPlayers: survivorsCount + eliminatedCount,
-        survivorsCount,
-        eliminatedCount,
-        onlineCount: onlineUsers.length,
-    };
 }
 // 获取Socket.IO实例
 export function getSocketIO() {

@@ -65,9 +65,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     }
 
     // 发送当前游戏状态
-    const gameState = await getGameState();
-    socket.emit('game_state', gameState);
-
+    const gameState = await gameManager.getGameState();
     socket.emit('game_state', gameState);
 
     if (gameState.status === 'playing' && gameState.currentQuestion) {
@@ -135,38 +133,6 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
   });
 
   return io;
-}
-
-// 获取游戏状态
-async function getGameState() {
-  const roomId = process.env.DEFAULT_ROOM_ID!;
-  
-  const [
-    gameState,
-    currentQuestion,
-    survivorsCount,
-    eliminatedCount,
-    currentRound,
-    onlineUsers
-  ] = await Promise.all([
-    redis.hGetAll(RedisKeys.gameState(roomId)),
-    redis.hGetAll(RedisKeys.currentQuestion(roomId)),
-    redis.sCard(RedisKeys.roomSurvivors(roomId)),
-    redis.sCard(RedisKeys.roomEliminated(roomId)),
-    redis.get(RedisKeys.currentRound(roomId)),
-    redis.keys(RedisKeys.userOnline('*')),
-  ]);
-
-  return {
-    status: gameState.status || 'waiting',
-    currentQuestion: currentQuestion || null,
-    round: parseInt(currentRound || '0'),
-    timeLeft: parseInt(gameState.timeLeft || '0'),
-    totalPlayers: survivorsCount + eliminatedCount,
-    survivorsCount,
-    eliminatedCount,
-    onlineCount: onlineUsers.length,
-  };
 }
 
 // 获取Socket.IO实例

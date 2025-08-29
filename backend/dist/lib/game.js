@@ -13,12 +13,37 @@ export class GameManager {
         // 清空存活和淘汰列表
         await redis.del(RedisKeys.roomSurvivors(this.roomId));
         await redis.del(RedisKeys.roomEliminated(this.roomId));
+        if (this.io) {
+            this.io.to(this.roomId).emit('game_start', await this.getGameState());
+        }
     }
     // 添加用户到游戏
     async addPlayer(userEmail) {
         await redis.sAdd(RedisKeys.roomSurvivors(this.roomId), userEmail);
         await redis.hSet(RedisKeys.userSession(userEmail), 'isAlive', 'true');
         await redis.hSet(RedisKeys.userSession(userEmail), 'joinedAt', new Date().toISOString());
+    }
+    // 获取游戏状态
+    async getGameState() {
+        const roomId = process.env.DEFAULT_ROOM_ID;
+        const [gameState, currentQuestion, survivorsCount, eliminatedCount, currentRound, onlineUsers] = await Promise.all([
+            redis.hGetAll(RedisKeys.gameState(roomId)),
+            redis.hGetAll(RedisKeys.currentQuestion(roomId)),
+            redis.sCard(RedisKeys.roomSurvivors(roomId)),
+            redis.sCard(RedisKeys.roomEliminated(roomId)),
+            redis.get(RedisKeys.currentRound(roomId)),
+            redis.keys(RedisKeys.userOnline('*')),
+        ]);
+        return {
+            status: gameState.status || 'waiting',
+            currentQuestion: currentQuestion || null,
+            round: parseInt(currentRound || '0'),
+            timeLeft: parseInt(gameState.timeLeft || '0'),
+            totalPlayers: survivorsCount + eliminatedCount,
+            survivorsCount,
+            eliminatedCount,
+            onlineCount: onlineUsers.length,
+        };
     }
     // 开始新一轮 - 管理员发布新题目
     async startNewRound(question) {
