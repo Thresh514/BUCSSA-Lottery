@@ -166,7 +166,6 @@ export default function AdminPage() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
       setConnected(true);
     });
 

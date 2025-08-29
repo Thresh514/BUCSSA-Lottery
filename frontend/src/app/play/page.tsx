@@ -108,7 +108,6 @@ export default function PlayPage() {
     });
 
     socket.on("game_state", (data: GameState) => {
-      console.log("Received question:", data.currentQuestion);
       setGameState(data);
       setCurrentQuestion(data.currentQuestion);
     });
