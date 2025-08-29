@@ -1,33 +1,51 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { io, Socket } from 'socket.io-client';
-import { Trophy, Users, UserX, Clock, Target, Wifi, WifiOff, Monitor, LogOut } from 'lucide-react';
-import { GameState, NewQuestionMessage, RoundResultMessage, GameEndedMessage } from '@/types';
-import { formatTime } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { io, Socket } from "socket.io-client";
+import {
+  Trophy,
+  Users,
+  UserX,
+  Clock,
+  Target,
+  Wifi,
+  WifiOff,
+  Monitor,
+  LogOut,
+} from "lucide-react";
+import {
+  GameState,
+  MinorityQuestion,
+  NewQuestion,
+  RoundResult,
+  GameEnded,
+} from "@/types";
+import { formatTime } from "@/lib/utils";
 
 export default function ShowPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState<NewQuestionMessage | null>(null);
-  const [lastResult, setLastResult] = useState<RoundResultMessage | null>(null);
-  const [gameEnded, setGameEnded] = useState<GameEndedMessage | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<NewQuestion | null>(
+    null
+  );
+  const [lastResult, setLastResult] = useState<RoundResult | null>(null);
+  const [gameEnded, setGameEnded] = useState<GameEnded | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
 
   // 检查用户权限
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
+    if (status === "authenticated" && session?.user) {
       if (!session.user.isDisplay) {
-        console.log('🚫 User is not authorized for display mode');
-        router.push('/play');
+        console.log("🚫 User is not authorized for display mode");
+        router.push("/play");
         return;
       }
-    } else if (status === 'unauthenticated') {
-      router.push('/login');
+    } else if (status === "unauthenticated") {
+      router.push("/login");
       return;
     }
   }, [session, status, router]);
@@ -38,63 +56,64 @@ export default function ShowPage() {
 
     const connectSocket = () => {
       try {
-        const serverUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
-        console.log('📺 Connecting to Socket.IO server:', serverUrl);
-        
+        const serverUrl =
+          process.env.NEXT_PUBLIC_WS_URL || "http://localhost:4000";
+        console.log("📺 Connecting to Socket.IO server:", serverUrl);
+
         const newSocket = io(serverUrl, {
           auth: {
             email: session.user.email,
           },
-          transports: ['websocket', 'polling'],
+          transports: ["websocket", "polling"],
           forceNew: true,
         });
 
-        newSocket.on('connect', () => {
-          console.log('📺 Display Socket.IO connected');
+        newSocket.on("connect", () => {
+          console.log("📺 Display Socket.IO connected");
           setSocket(newSocket);
         });
 
-        newSocket.on('game_state', (data) => {
-          console.log('📺 Received game_state:', data);
+        newSocket.on("game_state", (data: GameState) => {
+          console.log("📺 Received game_state:", data);
           setGameState(data);
         });
 
-        newSocket.on('new_question', (data) => {
-          console.log('📺 Received new_question:', data);
+        newSocket.on("new_question", (data: NewQuestion) => {
+          console.log("📺 Received new_question:", data);
           setCurrentQuestion(data);
           setLastResult(null);
           setGameEnded(null);
         });
 
-        newSocket.on('round_result', (data) => {
-          console.log('📺 Received round_result:', data);
+        newSocket.on("round_result", (data: RoundResult) => {
+          console.log("📺 Received round_result:", data);
           setLastResult(data);
         });
 
-        newSocket.on('game_ended', (data) => {
-          console.log('📺 Received game_ended:', data);
+        newSocket.on("game_ended", (data: GameEnded) => {
+          console.log("📺 Received game_ended:", data);
           setGameEnded(data);
           setCurrentQuestion(null);
         });
 
-        newSocket.on('disconnect', (reason) => {
-          console.log('📺 Display Socket.IO disconnected:', reason);
+        newSocket.on("disconnect", (reason: string) => {
+          console.log("📺 Display Socket.IO disconnected:", reason);
           setSocket(null);
         });
 
-        newSocket.on('connect_error', (error) => {
-          console.error('📺 Display Socket.IO connection error:', error);
-          
+        newSocket.on("connect_error", (error: any) => {
+          console.error("📺 Display Socket.IO connection error:", error);
+
           // 自动重连
           setTimeout(() => {
-            console.log('📺 Attempting to reconnect...');
+            console.log("📺 Attempting to reconnect...");
             connectSocket();
           }, 3000);
         });
 
         return newSocket;
       } catch (error) {
-        console.error('📺 Error creating Socket.IO connection:', error);
+        console.error("📺 Error creating Socket.IO connection:", error);
         setTimeout(connectSocket, 3000);
         return null;
       }
@@ -115,13 +134,13 @@ export default function ShowPage() {
       if (socket) {
         socket.disconnect();
       }
-      await signOut({ callbackUrl: '/login' });
+      await signOut({ callbackUrl: "/login" });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
-  if (status === 'loading') {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-white text-xl">加载中...</div>
@@ -219,7 +238,7 @@ export default function ShowPage() {
                 </div>
                 <div>
                   <p className="text-3xl font-bold text-white">
-                    {gameState.totalPlayers}
+                    {gameState.survivorsCount + gameState.eliminatedCount}
                   </p>
                   <p className="text-gray-400 text-sm">总参与人数</p>
                 </div>
@@ -257,8 +276,7 @@ export default function ShowPage() {
           >
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full text-white font-medium mb-6">
-                <Trophy className="w-5 h-5" />
-                第 {currentQuestion.round} 题
+                <Trophy className="w-5 h-5" />第 {currentQuestion.round} 题
               </div>
               <h2 className="text-4xl font-bold text-white mb-8">
                 {currentQuestion.question.question}
@@ -291,11 +309,13 @@ export default function ShowPage() {
 
             {/* 倒计时 */}
             <div className="text-center mt-12">
-              <div className={`text-8xl font-mono font-bold ${
-                currentQuestion.timeLeft <= 10 
-                  ? "text-red-400 animate-pulse" 
-                  : "text-yellow-400"
-              }`}>
+              <div
+                className={`text-8xl font-mono font-bold ${
+                  currentQuestion.timeLeft <= 10
+                    ? "text-red-400 animate-pulse"
+                    : "text-yellow-400"
+                }`}
+              >
                 {Math.max(0, currentQuestion.timeLeft)}
               </div>
               <div className="text-2xl text-gray-300 mt-4">秒</div>
@@ -304,7 +324,7 @@ export default function ShowPage() {
         )}
 
         {/* 等待状态 */}
-        {gameState?.status === 'waiting' && !currentQuestion && (
+        {gameState?.status === "waiting" && !currentQuestion && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -314,12 +334,11 @@ export default function ShowPage() {
               <Trophy className="w-12 h-12 text-blue-400" />
             </div>
             <h3 className="text-4xl font-bold text-white mb-6">游戏准备中</h3>
-            <p className="text-xl text-gray-300 mb-4">
-              等待管理员开始游戏...
-            </p>
-            {gameState.totalPlayers > 0 && (
+            <p className="text-xl text-gray-300 mb-4">等待管理员开始游戏...</p>
+            {gameState.survivorsCount + gameState.eliminatedCount > 0 && (
               <p className="text-lg text-blue-300">
-                当前已有 {gameState.totalPlayers} 名玩家加入
+                当前已有 {gameState.survivorsCount + gameState.eliminatedCount}{" "}
+                名玩家加入
               </p>
             )}
           </motion.div>
@@ -335,9 +354,11 @@ export default function ShowPage() {
             <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
               <Trophy className="w-12 h-12 text-yellow-400" />
             </div>
-            <h2 className="text-5xl font-bold mb-8 text-yellow-400">🎉 游戏结束</h2>
-            <div className="text-3xl mb-6 text-white">{gameEnded.message}</div>
-            {gameEnded.winner && (
+            <h2 className="text-5xl font-bold mb-8 text-yellow-400">
+              🎉 游戏结束
+            </h2>
+            <div className="text-3xl mb-6 text-white">{}</div>
+            {gameEnded.winnerEmail && (
               <div className="text-2xl text-green-400">
                 🏆 获胜者: {gameEnded.winnerEmail}
               </div>
@@ -355,7 +376,9 @@ export default function ShowPage() {
             <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
               <div className="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
-            <h2 className="text-4xl font-bold mb-6 text-white">连接游戏服务器中</h2>
+            <h2 className="text-4xl font-bold mb-6 text-white">
+              连接游戏服务器中
+            </h2>
             <p className="text-xl text-gray-300">正在获取游戏状态...</p>
           </motion.div>
         )}

@@ -1,5 +1,6 @@
 import express from 'express';
-import { GameManager, MinorityQuestion } from '../lib/game.js';
+import { GameManager} from '../lib/game.js';
+import { MinorityQuestion, GameStats, RoundStats} from '../types/index.js';
 
 const router = express.Router();
 
@@ -13,11 +14,13 @@ router.get('/game-stats', async (req, res) => {
     
     // 获取当前轮次统计（如果有进行中的轮次）
     const roundStats = await gameManager.getRoundStats();
-    
-    return res.status(200).json({
+
+    const allStats = {
       ...gameStats,
       roundStats,
-    });
+    }
+
+    return res.status(200).json(allStats);
   } catch (error) {
     console.error('获取游戏统计错误:', error);
     return res.status(500).json({ error: '服务器内部错误' });
@@ -42,6 +45,7 @@ router.post('/next-question', async (req, res) => {
       question,
       optionA,
       optionB,
+      startTime: new Date().toISOString()
     };
     
     // 开始新一轮

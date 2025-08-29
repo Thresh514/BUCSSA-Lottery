@@ -7,6 +7,7 @@ export interface MinorityQuestion {
   question: string;
   optionA: string;
   optionB: string;
+  startTime: string;
 }
 
 export class GameManager {
@@ -49,7 +50,7 @@ export class GameManager {
     await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'question', question.question);
     await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'optionA', question.optionA);
     await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'optionB', question.optionB);
-    await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'startTime', new Date().toISOString());
+    await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'startTime', question.startTime);
 
     // 设置游戏状态
     await redis.hSet(RedisKeys.gameState(this.roomId), 'status', 'playing');
@@ -87,7 +88,7 @@ export class GameManager {
     // 检查用户是否还在游戏中
     const isAlive = await redis.sIsMember(RedisKeys.roomSurvivors(this.roomId), userEmail);
     if (!isAlive) {
-      throw new Error('您已被淘汰');
+      throw new Error('您已被淘汰'); // catch these types of errors
     }
 
     // 记录用户答案
@@ -144,7 +145,7 @@ export class GameManager {
 
     // 广播结果
     if (this.io) {
-      this.io.to(this.roomId).emit('round_end', {
+      this.io.to(this.roomId).emit('round_result', {
         minorityAnswer,
         majorityAnswer,
         answers,
@@ -179,6 +180,8 @@ export class GameManager {
       if (this.io) {
         this.io.to(this.roomId).emit('time_update', { timeLeft });
       }
+
+      // better way to do the countdown?
       
       if (timeLeft <= 0) {
         clearInterval(countdown);

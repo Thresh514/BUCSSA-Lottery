@@ -7,19 +7,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatTime } from "@/lib/utils";
 import { io, Socket } from "socket.io-client";
-import { Play, RotateCcw, Users, UserX, Clock, Trophy, Wifi, WifiOff, Target, Activity, BarChart3, Zap, Crown, AlertTriangle, Plus, X, LogOut } from "lucide-react";
-import { MinorityQuestion, RoundStats } from "@/types";
+import {
+  Play,
+  RotateCcw,
+  Users,
+  UserX,
+  Clock,
+  Trophy,
+  Wifi,
+  WifiOff,
+  Target,
+  Activity,
+  BarChart3,
+  Zap,
+  Crown,
+  AlertTriangle,
+  Plus,
+  X,
+  LogOut,
+} from "lucide-react";
+import {
+  GameEnded,
+  GameState,
+  GameStats,
+  MinorityQuestion,
+  RoundResult,
+  RoundStats,
+} from "@/types";
 import { AlertBox } from "@/components/ui/alert-box";
-
-interface GameStats {
-  totalPlayers: number;
-  survivorsCount: number;
-  eliminatedCount: number;
-  currentRound: number;
-  status: string;
-  timeLeft: number;
-  roundStats?: RoundStats;
-}
 
 // 预设题目列表
 const PRESET_QUESTIONS = [
@@ -27,62 +42,62 @@ const PRESET_QUESTIONS = [
     id: "q1",
     question: "你觉得今年的国庆假期天气会更好吗？",
     optionA: "会更好",
-    optionB: "不会更好"
+    optionB: "不会更好",
   },
   {
-    id: "q2", 
+    id: "q2",
     question: "你更喜欢在家休息还是出门旅游？",
     optionA: "在家休息",
-    optionB: "出门旅游"
+    optionB: "出门旅游",
   },
   {
     id: "q3",
     question: "你认为月饼和粽子哪个更好吃？",
     optionA: "月饼更好吃",
-    optionB: "粽子更好吃"
+    optionB: "粽子更好吃",
   },
   {
     id: "q4",
     question: "你更喜欢看电影还是看电视剧？",
     optionA: "看电影",
-    optionB: "看电视剧"
+    optionB: "看电视剧",
   },
   {
     id: "q5",
     question: "你觉得早起还是晚睡更有害健康？",
     optionA: "早起有害",
-    optionB: "晚睡有害"
+    optionB: "晚睡有害",
   },
   {
     id: "q6",
     question: "你更愿意选择高薪但压力大的工作吗？",
     optionA: "愿意",
-    optionB: "不愿意"
+    optionB: "不愿意",
   },
   {
     id: "q7",
     question: "你认为人工智能会完全取代人类工作吗？",
     optionA: "会取代",
-    optionB: "不会取代"
+    optionB: "不会取代",
   },
   {
     id: "q8",
     question: "你更喜欢夏天还是冬天？",
     optionA: "夏天",
-    optionB: "冬天"
+    optionB: "冬天",
   },
   {
     id: "q9",
     question: "你觉得网购还是实体店购物更好？",
     optionA: "网购更好",
-    optionB: "实体店更好"
+    optionB: "实体店更好",
   },
   {
     id: "q10",
     question: "你认为运气比努力更重要吗？",
     optionA: "运气更重要",
-    optionB: "努力更重要"
-  }
+    optionB: "努力更重要",
+  },
 ];
 
 export default function AdminPage() {
@@ -159,7 +174,7 @@ export default function AdminPage() {
       setConnected(false);
     });
 
-    socket.on("game_state", (data: any) => {
+    socket.on("game_state", (data: GameState) => {
       setGameStats((prev) => ({
         ...prev,
         status: data.status,
@@ -182,14 +197,14 @@ export default function AdminPage() {
       }));
     });
 
-    socket.on("round_result", (data: any) => {
+    socket.on("round_result", (data: RoundResult) => {
       setMessage(
-        `第${gameStats.currentRound}轮结束：少数派选项是 ${data.minorityOption}，A选择${data.majorityCount}人，B选择${data.minorityCount}人，淘汰 ${data.eliminatedCount} 人`
+        `第${gameStats.currentRound}轮结束：少数派选项是 ${data.minorityAnswer}，A选择人数为${data.answers.A}人，B选择人数为${data.answers.B}人，淘汰人数为${data.eliminatedCount}人`
       );
       fetchGameStats();
     });
 
-    socket.on("game_ended", (data: any) => {
+    socket.on("game_ended", (data: GameEnded) => {
       setMessage(`游戏已结束！获胜者：${data.winnerEmail || "无"}`);
       fetchGameStats();
     });
@@ -344,7 +359,9 @@ export default function AdminPage() {
                   少数派游戏 - 管理控制台
                 </h1>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-300 text-sm">选择人数较少的选项晋级</span>
+                  <span className="text-gray-300 text-sm">
+                    选择人数较少的选项晋级
+                  </span>
                   <div className="flex items-center gap-1">
                     {connected ? (
                       <Wifi className="w-3 h-3 text-green-400" />
@@ -366,12 +383,16 @@ export default function AdminPage() {
             <div className="flex gap-2">
               <Button
                 onClick={() => handleSubmitQuestion(nextQuestionIndex)}
-                disabled={loading || gameStats.status === "playing" || nextQuestionIndex >= PRESET_QUESTIONS.length}
+                disabled={
+                  loading ||
+                  gameStats.status === "playing" ||
+                  nextQuestionIndex >= PRESET_QUESTIONS.length
+                }
                 className="h-9 px-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition-all duration-200 hover-lift disabled:opacity-50 disabled:transform-none text-sm"
               >
                 <Play className="w-3 h-3 mr-1" />
-                {nextQuestionIndex < PRESET_QUESTIONS.length 
-                  ? `发布第${nextQuestionIndex + 1}题` 
+                {nextQuestionIndex < PRESET_QUESTIONS.length
+                  ? `发布第${nextQuestionIndex + 1}题`
                   : "已完成所有题目"}
               </Button>
 
@@ -490,59 +511,76 @@ export default function AdminPage() {
         {!currentQuestion && gameStats.status === "waiting" && (
           <div className="glass rounded-2xl p-5 animate-slide-up">
             <div className="text-center mb-5">
-              <h3 className="text-lg font-bold text-white mb-2">预设题目列表</h3>
-              <p className="text-gray-400 text-sm">共 {PRESET_QUESTIONS.length} 道题目，当前准备发布第 {nextQuestionIndex + 1} 题</p>
+              <h3 className="text-lg font-bold text-white mb-2">
+                预设题目列表
+              </h3>
+              <p className="text-gray-400 text-sm">
+                共 {PRESET_QUESTIONS.length} 道题目，当前准备发布第{" "}
+                {nextQuestionIndex + 1} 题
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
               {PRESET_QUESTIONS.map((question, index) => (
-                <div 
+                <div
                   key={question.id}
                   className={`p-3 rounded-lg border transition-all duration-200 ${
-                    index === nextQuestionIndex 
-                      ? 'bg-blue-500/20 border-blue-400/50' 
-                      : index < nextQuestionIndex 
-                        ? 'bg-green-500/10 border-green-400/30'
-                        : 'bg-white/5 border-white/20'
+                    index === nextQuestionIndex
+                      ? "bg-blue-500/20 border-blue-400/50"
+                      : index < nextQuestionIndex
+                      ? "bg-green-500/10 border-green-400/30"
+                      : "bg-white/5 border-white/20"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
-                      index === nextQuestionIndex 
-                        ? 'bg-blue-500 text-white' 
-                        : index < nextQuestionIndex
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-500 text-white'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                        index === nextQuestionIndex
+                          ? "bg-blue-500 text-white"
+                          : index < nextQuestionIndex
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-500 text-white"
+                      }`}
+                    >
                       {index + 1}
                     </div>
-                    <span className={`text-xs font-medium ${
-                      index === nextQuestionIndex 
-                        ? 'text-blue-400' 
+                    <span
+                      className={`text-xs font-medium ${
+                        index === nextQuestionIndex
+                          ? "text-blue-400"
+                          : index < nextQuestionIndex
+                          ? "text-green-400"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {index === nextQuestionIndex
+                        ? "待发布"
                         : index < nextQuestionIndex
-                          ? 'text-green-400'
-                          : 'text-gray-400'
-                    }`}>
-                      {index === nextQuestionIndex 
-                        ? '待发布' 
-                        : index < nextQuestionIndex
-                          ? '已发布'
-                          : '未发布'}
+                        ? "已发布"
+                        : "未发布"}
                     </span>
                   </div>
-                  
+
                   <h4 className="text-white font-medium mb-2 text-xs leading-relaxed">
                     {question.question}
                   </h4>
-                  
+
                   <div className="space-y-1">
                     <div className="flex items-center gap-1">
-                      <span className="w-4 h-4 bg-blue-500/20 rounded flex items-center justify-center text-xs text-blue-400 font-bold">A</span>
-                      <span className="text-gray-300 text-xs truncate">{question.optionA}</span>
+                      <span className="w-4 h-4 bg-blue-500/20 rounded flex items-center justify-center text-xs text-blue-400 font-bold">
+                        A
+                      </span>
+                      <span className="text-gray-300 text-xs truncate">
+                        {question.optionA}
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="w-4 h-4 bg-pink-500/20 rounded flex items-center justify-center text-xs text-pink-400 font-bold">B</span>
-                      <span className="text-gray-300 text-xs truncate">{question.optionB}</span>
+                      <span className="w-4 h-4 bg-pink-500/20 rounded flex items-center justify-center text-xs text-pink-400 font-bold">
+                        B
+                      </span>
+                      <span className="text-gray-300 text-xs truncate">
+                        {question.optionB}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -596,19 +634,21 @@ export default function AdminPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="text-xl font-bold text-blue-400">
-                      {gameStats.roundStats.A_count}
+                      {gameStats.roundStats.answers.A}
                     </div>
                     <div className="text-gray-400 text-xs">选择 A</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-bold text-green-400">
-                      {gameStats.roundStats.B_count}
+                      {gameStats.roundStats.answers.B}
                     </div>
                     <div className="text-gray-400 text-xs">选择 B</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-bold text-red-400">
-                      {gameStats.roundStats.noAnswer_count}
+                      {gameStats.roundStats.totalAnswers -
+                        (gameStats.roundStats.answers.A +
+                          gameStats.roundStats.answers.B)}
                     </div>
                     <div className="text-gray-400 text-xs">未答题</div>
                   </div>
@@ -617,8 +657,6 @@ export default function AdminPage() {
             )}
           </div>
         )}
-
-
 
         {/* Message Display */}
         {message && (
