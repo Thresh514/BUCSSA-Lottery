@@ -25,7 +25,7 @@ export const authOptions: AuthOptions = {
       // console.log("✅ Email check result:", { email: userEmail, allowed });
       
       if (!allowed) {
-        console.log("❌ Email not allowed, blocking sign in");
+        // console.log("❌ Email not allowed, blocking sign in");
         return false;
       }
 
