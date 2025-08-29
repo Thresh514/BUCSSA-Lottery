@@ -23,7 +23,6 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
   // 中间件：验证用户邮箱
   io.use(async (socket, next) => {
     try {
-      console.log('收到连接请求:', socket.handshake.auth);
       const email = socket.handshake.auth.email;
       if (!email) {
         return next(new Error('未提供邮箱'));
@@ -49,7 +48,6 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
   // 连接事件处理
   io.on('connection', async (socket) => {
-    console.log(`用户 ${socket.data.user.email} 已连接`);
     const user = socket.data.user;
 
     // 用户加入游戏房间
@@ -74,16 +72,11 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
     if (gameState.status === 'playing' && gameState.currentQuestion) {
 
-      console.log("runningggg")
-
       try {
         const questionId = gameState.currentQuestion.id;
         const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
 
-        console.log("userAnswer", userAnswer);
-
         if (userAnswer) {
-          console.log("Emitting user_answer event");
           socket.emit('user_answer', {
             questionId,
             answer: userAnswer,
