@@ -21,22 +21,19 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import { MinorityQuestion } from "@/types";
-
-interface GameState {
-  status: "waiting" | "playing" | "ended";
-  currentQuestionId: string | null;
-  round: number;
-  timeLeft: number;
-  survivorsCount: number;
-  eliminatedCount: number;
-}
+import {
+  MinorityQuestion,
+  GameState,
+  RoundResult,
+  NewQuestion,
+  GameEnded,
+} from "@/types";
 
 export default function PlayPage() {
   const { data: session, status } = useSession();
   const [gameState, setGameState] = useState<GameState>({
     status: "waiting",
-    currentQuestionId: null,
+    currentQuestion: null,
     round: 0,
     timeLeft: 0,
     survivorsCount: 0,
@@ -103,10 +100,12 @@ export default function PlayPage() {
     });
 
     socket.on("game_state", (data: GameState) => {
+      console.log("Received question:", data.currentQuestion);
       setGameState(data);
+      setCurrentQuestion(data.currentQuestion);
     });
 
-    socket.on("new_question", (data: any) => {
+    socket.on("new_question", (data: NewQuestion) => {
       setCurrentQuestion(data.question);
       setSelectedOption("");
       setGameState((prev) => ({
@@ -119,6 +118,15 @@ export default function PlayPage() {
       setMessage("");
     });
 
+    // use AnswerSubmission here (need to refactor)
+    // backend checks if the answer is for the current question, so no checking is done on frontend, still LOWKEY DANGEROUS
+    socket.on(
+      "user_answer",
+      (data: { questionId: string; answer: "A" | "B" }) => {
+        setSelectedOption(data.answer);
+      }
+    );
+
     socket.on("countdown", (data: { timeLeft: number }) => {
       setGameState((prev) => ({
         ...prev,
@@ -126,11 +134,11 @@ export default function PlayPage() {
       }));
     });
 
-    socket.on("round_result", (data: any) => {
-      const minorityText = data.minorityOption === "A" ? "A" : "B";
-      const majorityText = data.minorityOption === "A" ? "B" : "A";
+    socket.on("round_result", (data: RoundResult) => {
+      const minorityText = data.minorityAnswer === "A" ? "A" : "B";
+      const majorityText = data.majorityAnswer === "A" ? "B" : "A";
       setMessage(
-        `少数派选项是 ${minorityText}（${data.minorityCount}人选择），多数派选项是 ${majorityText}（${data.majorityCount}人选择），本轮淘汰 ${data.eliminatedCount} 人，剩余 ${data.survivorsCount} 人`
+        `少数派选项是 ${minorityText}，多数派选项是 ${majorityText}，本轮淘汰 ${data.eliminatedCount} 人，剩余 ${data.survivorsCount} 人`
       );
       setGameState((prev) => ({
         ...prev,
@@ -147,9 +155,9 @@ export default function PlayPage() {
       }
     });
 
-    socket.on("game_ended", (data: any) => {
+    socket.on("game_ended", (data: GameEnded) => {
       setGameState((prev) => ({ ...prev, status: "ended" }));
-      if (data.winner === session.user?.email) {
+      if (data.winnerEmail === session.user?.email) {
         setMessage("🎉 恭喜您获得第一名！");
       } else if (data.winnerEmail) {
         setMessage(`游戏结束！获胜者是 ${data.winnerEmail}`);

@@ -9,10 +9,11 @@ router.get('/game-stats', async (req, res) => {
         const gameStats = await gameManager.getGameStats();
         // 获取当前轮次统计（如果有进行中的轮次）
         const roundStats = await gameManager.getRoundStats();
-        return res.status(200).json({
+        const allStats = {
             ...gameStats,
             roundStats,
-        });
+        };
+        return res.status(200).json(allStats);
     }
     catch (error) {
         console.error('获取游戏统计错误:', error);
@@ -34,6 +35,7 @@ router.post('/next-question', async (req, res) => {
             question,
             optionA,
             optionB,
+            startTime: new Date().toISOString()
         };
         // 开始新一轮
         await gameManager.startNewRound(minorityQuestion);

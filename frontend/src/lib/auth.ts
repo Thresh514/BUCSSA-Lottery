@@ -17,67 +17,67 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async signIn({ user }) {
       // 只允许 bu.edu 和 gmail.com 的邮箱
-      console.log("🔐 signIn callback triggered:", { email: user.email, id: user.id });
+      // console.log("🔐 signIn callback triggered:", { email: user.email, id: user.id });
 
       const userEmail = user.email || "";
       const allowed = userEmail.endsWith("@bu.edu") || userEmail.endsWith("@gmail.com");
 
-      console.log("✅ Email check result:", { email: userEmail, allowed });
+      // console.log("✅ Email check result:", { email: userEmail, allowed });
       
       if (!allowed) {
-        console.log("❌ Email not allowed, blocking sign in");
+        // console.log("❌ Email not allowed, blocking sign in");
         return false;
       }
 
       // 简化：只检查邮箱格式，管理员检查在 JWT 回调中进行
-      console.log("✅ Email allowed, proceeding with authentication");
+      // console.log("✅ Email allowed, proceeding with authentication");
       return true;
     },
     async jwt({ token, user }) {
 
-      console.log("🎫 JWT callback triggered:", { 
-        hasUser: !!user, 
-        userEmail: user?.email,
-        userId: user?.id,
-        tokenSub: token.sub 
-      });
+      // console.log("🎫 JWT callback triggered:", { 
+      //   hasUser: !!user, 
+      //   userEmail: user?.email,
+      //   userId: user?.id,
+      //   tokenSub: token.sub 
+      // });
 
       if (user) {
         try {
           // Use token.sub instead of user.id
           token.id = token.sub || user.id || "";
           
-          console.log("🔍 Checking admin and display status for:", user.email);
+          // console.log("🔍 Checking admin and display status for:", user.email);
 
           const isAdmin = await RedisAdapter.isAdminEmail(user.email || "");
           const isDisplay = await RedisAdapter.isDisplayEmail(user.email || "");
           token.isAdmin = isAdmin;
           token.isDisplay = isDisplay;
           
-          console.log("👑 Role check result:", { email: user.email, isAdmin, isDisplay });
+          // console.log("👑 Role check result:", { email: user.email, isAdmin, isDisplay });
 
         } catch (error) {
 
-          console.error("❌ JWT callback error:", error);
+          // console.error("❌ JWT callback error:", error);
           // Don't fail the whole authentication - set defaults
           token.isAdmin = false;
           token.isDisplay = false;
         }
       }
 
-      console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin, isDisplay: token.isDisplay });
+      // console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin, isDisplay: token.isDisplay });
       
       return token;
     },
 
     async session({ session, token }) {
 
-      console.log("📱 Session callback triggered:", { 
-        tokenId: token.id, 
-        tokenIsAdmin: token.isAdmin,
-        tokenIsDisplay: token.isDisplay,
-        tokenEmail: token.email 
-      });
+      // console.log("📱 Session callback triggered:", { 
+      //   tokenId: token.id, 
+      //   tokenIsAdmin: token.isAdmin,
+      //   tokenIsDisplay: token.isDisplay,
+      //   tokenEmail: token.email 
+      // });
 
       // 将用户ID添加到jwt令牌中
       if (token && session.user) {
@@ -86,13 +86,13 @@ export const authOptions: AuthOptions = {
         session.user.isDisplay = Boolean(token.isDisplay);
       }
 
-      console.log("📱 Session callback complete:", session.user);
+      // console.log("📱 Session callback complete:", session.user);
 
       return session;
     },
 
     async redirect({ url, baseUrl }) {
-      console.log("🔄 Redirect callback:", { url, baseUrl });
+      // console.log("🔄 Redirect callback:", { url, baseUrl });
       
       return `${baseUrl}/play`;
     },

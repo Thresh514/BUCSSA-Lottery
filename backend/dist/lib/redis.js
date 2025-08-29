@@ -40,8 +40,9 @@ export const RedisKeys = {
     // 游戏获胜者
     gameWinner: (roomId) => `game:${roomId}:winner`,
     // NextAuth 用户认证相关
-    nextAuthUser: (userId) => `nextauth:user:${userId}`,
-    nextAuthSession: (sessionToken) => `nextauth:session:${sessionToken}`,
-    nextAuthVerificationToken: (token) => `nextauth:verification_token:${token}`,
+    // 弃用功能
+    // nextAuthUser: (userId: string) => `nextauth:user:${userId}`,
+    // nextAuthSession: (sessionToken: string) => `nextauth:session:${sessionToken}`,
+    // nextAuthVerificationToken: (token: string) => `nextauth:verification_token:${token}`,
 };
 //# sourceMappingURL=redis.js.map

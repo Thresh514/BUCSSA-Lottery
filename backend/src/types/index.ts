@@ -75,7 +75,7 @@ export interface GameStats {
 
 // 游戏结束消息
 export interface GameEnded {
-  winnerEmail: string | null;
+  winner: string | null;
 }
 
 // JWT Payload

@@ -70,6 +70,30 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     const gameState = await getGameState();
     socket.emit('game_state', gameState);
 
+    socket.emit('game_state', gameState);
+
+    if (gameState.status === 'playing' && gameState.currentQuestion) {
+
+      console.log("runningggg")
+
+      try {
+        const questionId = gameState.currentQuestion.id;
+        const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
+
+        console.log("userAnswer", userAnswer);
+
+        if (userAnswer) {
+          console.log("Emitting user_answer event");
+          socket.emit('user_answer', {
+            questionId,
+            answer: userAnswer,
+          });
+        }
+      } catch (error: any) {
+        socket.emit('error', { message: error.message });
+      }
+    }
+
     // 如果用户已被淘汰，立即通知
     if (isEliminated) {
       socket.emit('eliminated', { 
@@ -79,6 +103,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     }
 
     // 处理答题提交
+    // not used
     socket.on('submit_answer', async (data) => {
       const { answer } = data;
 
@@ -141,7 +166,7 @@ async function getGameState() {
 
   return {
     status: gameState.status || 'waiting',
-    currentQuestionId: currentQuestion.id || null,
+    currentQuestion: currentQuestion || null,
     round: parseInt(currentRound || '0'),
     timeLeft: parseInt(gameState.timeLeft || '0'),
     totalPlayers: survivorsCount + eliminatedCount,
