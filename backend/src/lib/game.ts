@@ -282,7 +282,14 @@ export class GameManager {
     for (const key of keys) {
       await redis.del(key);
     }
-    
+
+    const answerKeys = await redis.keys(RedisKeys.userAnswer('*', '*'));
+    if (answerKeys.length > 0) {
+      for (const key of answerKeys) {
+        await redis.del(key);
+      }
+    }
+
     // 重新初始化游戏
     await this.initializeGame();
   }
