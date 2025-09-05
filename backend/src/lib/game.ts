@@ -138,7 +138,38 @@ export class GameManager {
 
     const survivors = await redis.sMembers(RedisKeys.roomSurvivors(this.roomId)) as string[];
     if (!survivors) return;
-    
+
+    if (survivors.length === 2) {
+      // 进入决赛圈 - 直接宣布赢家
+      const answers: { [key: string]: string[] } = { A: [], B: [] };
+      for (const userEmail of survivors) {
+        const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
+        if (answer === 'A' || answer === 'B') {
+          answers[answer].push(userEmail);
+        }
+      }
+
+      if (answers.A.length === 1 && answers.B.length === 1) {
+        // Different choices - randomly pick winner or use specific rule
+        const winner = Math.random() < 0.5 ? answers.A[0] : answers.B[0];
+        const loser = winner === answers.A[0] ? answers.B[0] : answers.A[0];
+
+        console.log('决赛赢家:', winner);
+        console.log('决赛输家:', loser);
+
+        await redis.sRem(RedisKeys.roomSurvivors(this.roomId), loser);
+        await redis.sAdd(RedisKeys.roomEliminated(this.roomId), loser);
+        await redis.hSet(RedisKeys.userSession(loser), 'isAlive', 'false');
+        await redis.hSet(RedisKeys.userSession(loser), 'eliminatedAt', new Date().toISOString());
+
+        await this.endGame(winner);
+        return;
+      } else {
+        // Same choice or one didn't answer - continue game
+        await redis.hSet(RedisKeys.gameState(this.roomId), 'status', 'waiting');
+      }
+    }
+
     const answers: { [key: string]: number } = { A: 0, B: 0 };
 
     // 统计答案
@@ -156,13 +187,20 @@ export class GameManager {
     }
 
     // 找出少数派
-    const minorityAnswer = answers.A <= answers.B ? 'A' : 'B';
-    const majorityAnswer = answers.A <= answers.B ? 'B' : 'A';
+    let majorityAnswer: string | null;
+    let minorityAnswer: string | null;
+    if (answers.A === answers.B) { // 平局则无人淘汰
+      majorityAnswer = null;
+      minorityAnswer = null;
+    } else {
+      minorityAnswer = answers.A <= answers.B ? 'A' : 'B';
+      majorityAnswer = answers.A <= answers.B ? 'B' : 'A';
+    }
 
     // 淘汰多数派，保留少数派
     for (const userEmail of survivors) {
       const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
-      if (answer === majorityAnswer) {
+      if (majorityAnswer && answer === majorityAnswer) {
         // 淘汰用户
         await redis.sRem(RedisKeys.roomSurvivors(this.roomId), userEmail);
         await redis.sAdd(RedisKeys.roomEliminated(this.roomId), userEmail);
@@ -181,6 +219,7 @@ export class GameManager {
       // 游戏结束
       const winner = remainingSurvivors.length === 1 ? remainingSurvivors[0] : null;
       await this.endGame(winner);
+      return;
     } else {
       // 继续下一轮
       await redis.hSet(RedisKeys.gameState(this.roomId), 'status', 'waiting');
@@ -210,7 +249,7 @@ export class GameManager {
 
     // 广播游戏结束
     if (this.io) {
-      this.io.to(this.roomId).emit('game_end', { winner });
+      this.io.to(this.roomId).emit('game_end', { winnerEmail: winner });
     }
   }
 

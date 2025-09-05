@@ -48,7 +48,6 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
   // 连接事件处理
   io.on('connection', async (socket) => {
-    console.log('用户连接:', socket.data.user.email);
     const user = socket.data.user;
 
     // 用户加入游戏房间

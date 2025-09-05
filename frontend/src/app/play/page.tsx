@@ -180,8 +180,10 @@ export default function PlayPage() {
         setIsWinner(true);
         setMessage("🎉 恭喜您获得第一名！");
       } else if (data.winnerEmail) {
+        setIsEliminated(true);
         setMessage(`游戏结束！获胜者是 ${data.winnerEmail}`);
       } else {
+        setIsEliminated(true);
         setMessage("游戏结束！");
       }
     });
@@ -315,7 +317,7 @@ export default function PlayPage() {
       <main className="max-w-4xl mx-auto p-4 space-y-6">
         {/* Game Stats */}
         <div className="grid grid-cols-2 gap-4 animate-fade-in">
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
+          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-blue-600" />
@@ -327,9 +329,9 @@ export default function PlayPage() {
                 <p className="text-sm text-gray-600">当前轮次</p>
               </div>
             </div>
-          </div>
+          </div> */}
 
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
+          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                 <Clock className="w-6 h-6 text-orange-600" />
@@ -347,7 +349,7 @@ export default function PlayPage() {
                 <p className="text-sm text-gray-600">剩余时间</p>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {gameState.status === "ended" && (
