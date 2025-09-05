@@ -59,8 +59,10 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     const gameManager = new GameManager();
     const isInGame = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
     const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(roomId), user.email);
+    const isWinner = await redis.get(RedisKeys.gameWinner(roomId)) === user.email;
+    const isAdmin = await redis.sIsMember(RedisKeys.admin(), user.email);
     
-    if (!isInGame && !isEliminated) {
+    if (!isInGame && !isEliminated && !isAdmin) {
       // 新用户加入游戏
       await gameManager.addPlayer(user.email);
     }
@@ -91,6 +93,13 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       socket.emit('eliminated', { 
         userId: user.email,
         message: '您已被淘汰' 
+      });
+    }
+
+    if (isWinner) {
+      socket.emit('winner', { 
+        userId: user.email,
+        message: '恭喜您获得第一名！' 
       });
     }
 

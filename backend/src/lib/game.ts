@@ -146,6 +146,12 @@ export class GameManager {
       const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
       if (answer && (answer === 'A' || answer === 'B')) {
         answers[answer]++;
+      } else {
+        // 未答题视为弃权，淘汰
+        await redis.sRem(RedisKeys.roomSurvivors(this.roomId), userEmail);
+        await redis.sAdd(RedisKeys.roomEliminated(this.roomId), userEmail);
+        await redis.hSet(RedisKeys.userSession(userEmail), 'isAlive', 'false');
+        await redis.hSet(RedisKeys.userSession(userEmail), 'eliminatedAt', new Date().toISOString());
       }
     }
 
@@ -168,6 +174,8 @@ export class GameManager {
     // 检查游戏是否结束
     const remainingSurvivors = await redis.sMembers(RedisKeys.roomSurvivors(this.roomId)) as string[];
     if (!remainingSurvivors) return;
+
+    console.log('剩余存活用户:', remainingSurvivors);
     
     if (remainingSurvivors.length <= 1) {
       // 游戏结束
