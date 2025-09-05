@@ -103,6 +103,9 @@ export default function PlayPage() {
     socket.on("game_start", (data: GameState) => {
       setGameState(data);
       setCurrentQuestion(null);
+      console.log(
+        "🔄 setSelectedOption called by 'game_start' event, setting to: ''"
+      );
       setSelectedOption("");
       setIsWinner(false);
       setIsEliminated(false);
@@ -116,6 +119,9 @@ export default function PlayPage() {
 
     socket.on("new_question", (data: NewQuestion) => {
       setCurrentQuestion(data.question);
+      console.log(
+        "🔄 setSelectedOption called by 'new_question' event, setting to: ''"
+      );
       setSelectedOption("");
       setGameState((prev) => ({
         ...prev,
@@ -132,7 +138,12 @@ export default function PlayPage() {
     socket.on(
       "user_answer",
       (data: { questionId: string; answer: "A" | "B" }) => {
-        setSelectedOption(data.answer);
+        console.log(
+          `🔄 setSelectedOption called by 'user_answer' event, setting to: '${data.answer}'`
+        );
+        if (data.questionId === currentQuestion?.id) {
+          setSelectedOption(data.answer);
+        }
       }
     );
 
@@ -165,8 +176,6 @@ export default function PlayPage() {
     });
 
     socket.on("winner", (data: any) => {
-      console.log("收到 winner 事件:", data);
-      console.log("当前用户:", session.user?.email);
       if (data.userId === session.user?.email) {
         setIsWinner(true);
         setMessage("🎉 恭喜您获得第一名！");
@@ -174,7 +183,6 @@ export default function PlayPage() {
     });
 
     socket.on("game_end", (data: GameEnded) => {
-      console.log("游戏结束数据:", data);
       setGameState((prev) => ({ ...prev, status: "ended" }));
       if (data.winnerEmail === session.user?.email) {
         setIsWinner(true);

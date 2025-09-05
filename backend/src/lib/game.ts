@@ -81,6 +81,11 @@ export class GameManager {
     // 更新当前轮次
     await redis.set(RedisKeys.currentRound(this.roomId), newRound.toString());
 
+    const allUserKeys = await redis.keys(RedisKeys.userAnswer('*', '*'));
+    if (allUserKeys.length > 0) {
+      await Promise.all(allUserKeys.map(key => redis.del(key)));
+    }
+
     // 保存当前题目
     await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'id', question.id);
     await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'question', question.question);
@@ -95,6 +100,14 @@ export class GameManager {
     // 广播新题目给所有存活用户
     if (this.io) {
       const survivorsCount = await redis.sCard(RedisKeys.roomSurvivors(this.roomId));
+      console.log(`🎯 Broadcasting new_question to room ${this.roomId}, round ${newRound}, survivors: ${survivorsCount}`);
+      console.log(`📡 Question data:`, {
+        id: question.id,
+        question: question.question,
+        optionA: question.optionA,
+        optionB: question.optionB,
+      });
+      
       this.io.to(this.roomId).emit('new_question', {
         question: {
           id: question.id,
@@ -106,6 +119,10 @@ export class GameManager {
         timeLeft: 30,
         survivorsCount,
       });
+      
+      console.log(`✅ new_question event emitted to room ${this.roomId}`);
+    } else {
+      console.log(`❌ Socket.IO instance is null, cannot emit new_question`);
     }
 
     // 启动倒计时
@@ -154,9 +171,6 @@ export class GameManager {
         const winner = Math.random() < 0.5 ? answers.A[0] : answers.B[0];
         const loser = winner === answers.A[0] ? answers.B[0] : answers.A[0];
 
-        console.log('决赛赢家:', winner);
-        console.log('决赛输家:', loser);
-
         await redis.sRem(RedisKeys.roomSurvivors(this.roomId), loser);
         await redis.sAdd(RedisKeys.roomEliminated(this.roomId), loser);
         await redis.hSet(RedisKeys.userSession(loser), 'isAlive', 'false');
@@ -189,7 +203,7 @@ export class GameManager {
     // 找出少数派
     let majorityAnswer: string | null;
     let minorityAnswer: string | null;
-    if (answers.A === answers.B) { // 平局则无人淘汰
+    if (answers.A === answers.B || answers.A === 0 || answers.B === 0) { // 无人淘汰情况
       majorityAnswer = null;
       minorityAnswer = null;
     } else {
