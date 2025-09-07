@@ -120,6 +120,7 @@ export default function AdminPage() {
 
   // 当前可发布的题目索引
   const [nextQuestionIndex, setNextQuestionIndex] = useState(0);
+  const [sentQuestions, setSentQuestions] = useState<Set<number>>(new Set());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
@@ -212,13 +213,14 @@ export default function AdminPage() {
       setMessage("游戏已重置");
       setCurrentQuestion(null);
       setNextQuestionIndex(0);
+      setSentQuestions(new Set());
       fetchGameStats();
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [gameStats.currentRound]);
+  }, [status, session]); // Remove gameStats.currentRound dependency
 
   const fetchGameStats = async () => {
     try {
@@ -241,6 +243,7 @@ export default function AdminPage() {
     }
 
     const questionData = PRESET_QUESTIONS[questionIndex];
+    const isRepublish = sentQuestions.has(questionIndex);
     setLoading(true);
     setMessage("");
 
@@ -260,8 +263,12 @@ export default function AdminPage() {
 
       if (response.ok) {
         setCurrentQuestion(data.question);
-        setMessage(`第${questionIndex + 1}题已发布`);
-        setNextQuestionIndex(questionIndex + 1);
+        setMessage(
+          `第${questionIndex + 1}题${isRepublish ? "重新" : ""}发布: ${
+            questionData.question
+          }`
+        );
+        setSentQuestions((prev) => new Set([...prev, questionIndex]));
         fetchGameStats();
       } else {
         setMessage(data.error || "发布题目失败");
@@ -295,6 +302,7 @@ export default function AdminPage() {
         setMessage(data.message);
         setCurrentQuestion(null);
         setNextQuestionIndex(0);
+        setSentQuestions(new Set());
         fetchGameStats();
       } else {
         setMessage(data.error || "重置游戏失败");
@@ -380,21 +388,6 @@ export default function AdminPage() {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                onClick={() => handleSubmitQuestion(nextQuestionIndex)}
-                disabled={
-                  loading ||
-                  gameStats.status === "playing" ||
-                  nextQuestionIndex >= PRESET_QUESTIONS.length
-                }
-                className="h-9 px-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg font-medium transition-all duration-200 hover-lift disabled:opacity-50 disabled:transform-none text-sm"
-              >
-                <Play className="w-3 h-3 mr-1" />
-                {nextQuestionIndex < PRESET_QUESTIONS.length
-                  ? `发布第${nextQuestionIndex + 1}题`
-                  : "已完成所有题目"}
-              </Button>
-
               <Button
                 onClick={handleResetGame}
                 disabled={loading}
@@ -506,37 +499,33 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 预设题目预览 */}
-        {!currentQuestion && gameStats.status === "waiting" && (
-          <div className="glass rounded-2xl p-5 animate-slide-up">
-            <div className="text-center mb-5">
-              <h3 className="text-lg font-bold text-white mb-2">
-                预设题目列表
-              </h3>
-              <p className="text-gray-400 text-sm">
-                共 {PRESET_QUESTIONS.length} 道题目，当前准备发布第{" "}
-                {nextQuestionIndex + 1} 题
-              </p>
-            </div>
+        {/* 题目列表 - 始终可见 */}
+        <div className="glass rounded-2xl p-5 animate-slide-up">
+          <div className="text-center mb-5">
+            <h3 className="text-lg font-bold text-white mb-2">题目列表</h3>
+            <p className="text-gray-400 text-sm">
+              共 {PRESET_QUESTIONS.length} 道题目，已发布 {sentQuestions.size}{" "}
+              题
+            </p>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-              {PRESET_QUESTIONS.map((question, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-82 overflow-y-auto">
+            {PRESET_QUESTIONS.map((question, index) => {
+              const isSent = sentQuestions.has(index);
+              const isCurrentlyPlaying = gameStats.status === "playing";
+              const isGameEnded = gameStats.status === "ended";
+              const canPublish =
+                !loading && !isCurrentlyPlaying && !isGameEnded;
+
+              return (
                 <div
                   key={question.id}
-                  className={`p-3 rounded-lg border transition-all duration-200 ${
-                    index === nextQuestionIndex
-                      ? "bg-blue-500/20 border-blue-400/50"
-                      : index < nextQuestionIndex
-                      ? "bg-green-500/10 border-green-400/30"
-                      : "bg-white/5 border-white/20"
-                  }`}
+                  className="p-3 rounded-lg border transition-all duration-200 relative bg-white/5 border-white/20 hover:border-white/40"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
-                        index === nextQuestionIndex
-                          ? "bg-blue-500 text-white"
-                          : index < nextQuestionIndex
+                        isSent
                           ? "bg-green-500 text-white"
                           : "bg-gray-500 text-white"
                       }`}
@@ -545,18 +534,10 @@ export default function AdminPage() {
                     </div>
                     <span
                       className={`text-xs font-medium ${
-                        index === nextQuestionIndex
-                          ? "text-blue-400"
-                          : index < nextQuestionIndex
-                          ? "text-green-400"
-                          : "text-gray-400"
+                        isSent ? "text-green-400" : "text-gray-400"
                       }`}
                     >
-                      {index === nextQuestionIndex
-                        ? "待发布"
-                        : index < nextQuestionIndex
-                        ? "已发布"
-                        : "未发布"}
+                      {isSent ? "已发布" : "待发布"}
                     </span>
                   </div>
 
@@ -564,7 +545,7 @@ export default function AdminPage() {
                     {question.question}
                   </h4>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 mb-3">
                     <div className="flex items-center gap-1">
                       <span className="w-4 h-4 bg-blue-500/20 rounded flex items-center justify-center text-xs text-blue-400 font-bold">
                         A
@@ -582,11 +563,29 @@ export default function AdminPage() {
                       </span>
                     </div>
                   </div>
+
+                  {/* 发布按钮 */}
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => handleSubmitQuestion(index)}
+                      disabled={!canPublish}
+                      size="sm"
+                      className={`h-7 px-3 text-xs font-medium transition-all duration-200 ${
+                        canPublish
+                          ? isSent
+                            ? "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white hover-lift"
+                            : "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white hover-lift"
+                          : "bg-gray-500/20 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      {isSent ? "重新发布" : "发布"}
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {/* Current Question Display */}
         {currentQuestion && (

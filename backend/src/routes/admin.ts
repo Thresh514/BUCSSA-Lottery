@@ -32,12 +32,16 @@ router.post('/next-question', async (req, res) => {
   try {
     const { question, optionA, optionB } = req.body;
 
+    const gameManager = new GameManager();
+
+    if ((await gameManager.getGameState()).status === 'playing' || (await gameManager.getGameState()).status === 'ended') {
+      return res.status(400).json({ error: '当前有进行中的游戏轮次，请先结束再发布新题目' });
+    }
+
     // 验证必要字段
     if (!question || !optionA || !optionB) {
       return res.status(400).json({ error: '请提供题目内容和两个选项' });
     }
-
-    const gameManager = new GameManager();
     
     // 创建少数派题目
     const minorityQuestion: MinorityQuestion = {

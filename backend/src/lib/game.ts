@@ -274,9 +274,9 @@ export class GameManager {
     const countdown = setInterval(async () => {
       timeLeft--;
       
-      if (this.io) {
-        this.io.to(this.roomId).emit('time_update', { timeLeft });
-      }
+      // if (this.io) {
+      //   this.io.to(this.roomId).emit('time_update', { timeLeft });
+      // }
 
       // better way to do the countdown?
       

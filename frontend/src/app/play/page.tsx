@@ -142,6 +142,9 @@ export default function PlayPage() {
           `🔄 setSelectedOption called by 'user_answer' event, setting to: '${data.answer}'`
         );
         if (data.questionId === currentQuestion?.id) {
+          console.log(
+            "Answer matches current question, updating selectedOption."
+          );
           setSelectedOption(data.answer);
         }
       }
