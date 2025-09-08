@@ -328,7 +328,7 @@ export default function ShowPage() {
                 <Trophy className="w-5 h-5" />第 {currentQuestion.round} 题
               </div>
               <h2 className="text-4xl font-bold text-white mb-8">
-                {currentQuestion.question.question}
+                {currentQuestion.question}
               </h2>
             </div>
 

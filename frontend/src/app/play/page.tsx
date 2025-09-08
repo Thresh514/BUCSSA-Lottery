@@ -21,7 +21,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import { MinorityQuestion, GameState, RoundResult, NewQuestion, Winner, Tie, Eliminated } from "@/types";
+import { GameState, RoundResult, NewQuestion, GameEnded } from "@/types";
 
 export default function PlayPage() {
   const { data: session, status } = useSession();
@@ -34,7 +34,6 @@ export default function PlayPage() {
     eliminatedCount: 0,
     userAnswer: null,
   });
-  const [currentQuestion, setCurrentQuestion] = useState<MinorityQuestion | null>(null);
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
   const [isEliminated, setIsEliminated] = useState(false);
   const [isWinner, setIsWinner] = useState(false);
@@ -69,94 +68,103 @@ export default function PlayPage() {
     if (status === "unauthenticated") {
       return;
     }
+
     if (!session?.user?.email) {
       return;
     }
+
     if (session.user.isAdmin) {
       return;
     }
+
     const socket = io(process.env.NEXT_PUBLIC_API_BASE!, {
       auth: {
         email: session.user.email,
       },
     });
+
     socketRef.current = socket;
+
     socket.on("connect", () => {
       setConnected(true);
     });
+
     socket.on("disconnect", () => {
       setConnected(false);
     });
+
+    socket.on("game_state", (data: GameState) => {
+      console.log("game_state received:", data);
+      setGameState(data);
+      setSelectedOption(data.userAnswer || "");
+    });
+
     socket.on("game_start", (data: GameState) => {
       setGameState(data);
-      setCurrentQuestion(null);
-      console.log("🔄 setSelectedOption called by 'game_start' event");
-      setSelectedOption("");
+      setSelectedOption(data.userAnswer || "");
       setIsWinner(false);
       setIsTie(false);
       setIsEliminated(false);
-      setIsTie(false);
     });
-    socket.on("game_state", (data: GameState) => {
-      setGameState(data);
-      setCurrentQuestion(data.currentQuestion);
-      setGameState((prev) => ({
-        ...prev,
-        ...data,
-        status: "waiting",
-        eliminatedCount: prev.eliminatedCount + data.eliminatedCount,
-    }));
 
     socket.on("new_question", (data: GameState) => {
-      setCurrentQuestion(data.currentQuestion);
-      console.log(
-        "🔄 setSelectedOption called by 'new_question' event, setting to: ''"
-      );
-      setSelectedOption("");
-      setGameState((prev) => ({
-        ...prev, 
-        status: "playing",
-        round: data.round,
-        timeLeft: data.timeLeft,
-        survivorsCount: data.survivorsCount,
-      }));
+      setSelectedOption(data.userAnswer || "");
+      setGameState(data);
     });
 
-    // use AnswerSubmission here (need to refactor)
-    // backend checks if the answer is for the current question, so no checking is done on frontend, still LOWKEY DANGEROUS
-    socket.on("user_answer",(data: { questionId: string; answer: "A" | "B" }) => {
-        console.log(`🔄 setSelectedOption called by 'user_answer' event, setting to: '${data.answer}'`);
-        if (data.questionId === currentQuestion?.id) {
-          console.log("Answer matches current question, updating selectedOption.");
-          setSelectedOption(data.answer);
-        }
-      });
+    socket.on("round_result", (data: GameState) => {
+      console.log("round_result received:", data);
+      setGameState(data);
+      setSelectedOption(data.userAnswer || "");
     });
-    socket.on("eliminated", (data: Eliminated) => {
+
+    socket.on("eliminated", (data: any) => {
       if (data.userId === session.user?.email) {
         setIsEliminated(true);
       }
     });
-    socket.on("winner", (data: Winner) => {
-      if (data.winnerEmail === session.user?.email) {
+
+    socket.on("winner", (data: any) => {
+      if (data.userId === session.user?.email) {
         setIsWinner(true);
       }
     });
-    socket.on("tie", (data: Tie) => {
+
+    socket.on("tie", (data: any) => {
+      console.log("tie event data:", data);
       if (data.finalists?.includes(session.user?.email || "")) {
         setIsTie(true);
-
       }
     });
+
+    // socket.on("game_end", (data: GameEnded) => {
+    //   setGameState((prev) => ({ ...prev, status: "ended" }));
+    //   if (data.winnerEmail === session.user?.email) {
+    //     setIsWinner(true);
+    //   } else if (
+    //     data.tie &&
+    //     data.finalists.includes(session.user?.email || "")
+    //   ) {
+    //     setIsTie(true);
+    //     `平局，是${data.finalists.join(", ")}进入决赛圈`;
+    //   } else if (data.winnerEmail) {
+    //     setIsEliminated(true);
+    //     `游戏结束！获胜者是 ${data.winnerEmail}`;
+    //   } else {
+    //     setIsEliminated(true);
+    //     ("游戏结束！");
+    //   }
+    // });
+
     socket.on("error", (data: any) => {
       console.error("Socket 错误:", data);
+      data.message;
     });
 
     return () => {
-      socket.removeAllListeners();
       socket.disconnect();
     };
-  }, [status, session?.user?.email, session?.user?.isAdmin]);
+  }, [router, gameState.eliminatedCount, session, status]);
 
   const handleSubmitAnswer = async (option: "A" | "B") => {
     if (!gameState.currentQuestion || isEliminated || selectedOption) return;
@@ -178,12 +186,17 @@ export default function PlayPage() {
         }
       );
 
+      const data = await response.json();
+
       if (response.ok) {
+        `您选择了选项 ${option}，请等待结果...`;
       } else {
+        data.error || "提交答案失败";
         setSelectedOption("");
       }
     } catch (error) {
       console.error("提交答案错误:", error);
+      ("网络错误，请稍后重试");
       setSelectedOption("");
     }
   };
@@ -261,7 +274,44 @@ export default function PlayPage() {
       </header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        {gameState.status === "ended" && (
+        {/* Game Stats */}
+        <div className="grid grid-cols-2 gap-4 animate-fade-in">
+          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-600">
+                  {gameState.round}
+                </p>
+                <p className="text-sm text-gray-600">当前轮次</p>
+              </div>
+            </div>
+          </div> */}
+
+          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p
+                  className={`text-2xl font-bold ${
+                    gameState.timeLeft <= 10
+                      ? "text-red-600 animate-pulse"
+                      : "text-orange-600"
+                  }`}
+                >
+                  {formatTime(gameState.timeLeft)}
+                </p>
+                <p className="text-sm text-gray-600">剩余时间</p>
+              </div>
+            </div>
+          </div> */}
+        </div>
+
+        {/* {gameState.status === "ended" && (
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 text-center animate-slide-up">
             <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Crown className="w-8 h-8 text-yellow-600" />
@@ -401,20 +451,29 @@ export default function PlayPage() {
                 </button>
               </div>
 
-            {selectedOption && (
-              <div className="text-center p-4 bg-green-50 border border-green-200 rounded-xl animate-scale-in">
-                <div className="flex items-center justify-center gap-2 text-green-800">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="font-medium">
-                    您已选择选项 {selectedOption}，请等待结果...
-                  </span>
+              {selectedOption && (
+                <div className="text-center p-4 bg-green-50 border border-green-200 rounded-xl animate-scale-in">
+                  <div className="flex items-center justify-center gap-2 text-green-800">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-medium">
+                      您已选择选项 {selectedOption}，请等待结果...
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          )}
+
+        {/* Message Display */}
+        {/* {message && (
+          <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 text-center animate-scale-in">
+            <div className="flex items-center justify-center gap-2 text-gray-700">
+              <AlertCircle className="w-5 h-5" />
+              <span className="font-medium">{message}</span>
+            </div>
           </div>
-        )}
+        )} */}
       </main>
     </div>
   );
-
 }
