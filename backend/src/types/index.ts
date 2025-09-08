@@ -35,7 +35,6 @@ export interface GameState {
   status: "waiting" | "playing" | "ended";
   currentQuestion: MinorityQuestion | null;
   round: number;
-  timeLeft: number;
   survivorsCount: number;
   eliminatedCount: number;
 }
