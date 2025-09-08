@@ -55,7 +55,10 @@ export const RedisKeys = {
   // 游戏获胜者
   gameWinner: (roomId: string) => `game:${roomId}:winner`,
 
+  // 管理员列表
   admin: () => "nextauth:admin_emails",
+
+  show: () => "nextauth:display_emails",
   
   // NextAuth 用户认证相关
   // 弃用功能

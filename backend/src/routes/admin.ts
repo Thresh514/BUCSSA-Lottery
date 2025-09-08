@@ -34,7 +34,7 @@ router.post('/next-question', async (req, res) => {
 
     const gameManager = new GameManager();
 
-    if ((await gameManager.getGameState()).status === 'playing' || (await gameManager.getGameState()).status === 'ended') {
+    if ((await gameManager.getRoomState()).status === 'playing' || (await gameManager.getRoomState()).status === 'ended') {
       return res.status(400).json({ error: '当前有进行中的游戏轮次，请先结束再发布新题目' });
     }
 

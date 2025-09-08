@@ -32,6 +32,7 @@ export default function PlayPage() {
     timeLeft: 0,
     survivorsCount: 0,
     eliminatedCount: 0,
+    userAnswer: null,
   });
   const [currentQuestion, setCurrentQuestion] = useState<MinorityQuestion | null>(null);
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
@@ -92,6 +93,7 @@ export default function PlayPage() {
       console.log("🔄 setSelectedOption called by 'game_start' event");
       setSelectedOption("");
       setIsWinner(false);
+      setIsTie(false);
       setIsEliminated(false);
       setIsTie(false);
     });
@@ -157,7 +159,7 @@ export default function PlayPage() {
   }, [status, session?.user?.email, session?.user?.isAdmin]);
 
   const handleSubmitAnswer = async (option: "A" | "B") => {
-    if (!currentQuestion || isEliminated || selectedOption) return;
+    if (!gameState.currentQuestion || isEliminated || selectedOption) return;
 
     setSelectedOption(option);
 
@@ -192,15 +194,6 @@ export default function PlayPage() {
     }
     await signOut({ callbackUrl: "/login" });
   };
-
-  // // 显示调试信息
-  // if (process.env.NODE_ENV === "development") {
-  //   console.log("渲染状态:", {
-  //     status,
-  //     session: !!session,
-  //     user: session?.user || null,
-  //   });
-  // }
 
   if (status === "loading" || !session) {
     return (
@@ -276,7 +269,7 @@ export default function PlayPage() {
             <h2 className="text-xl font-bold text-yellow-900 mb-2">游戏结束</h2>
             <p className="text-yellow-700">本轮游戏已结束，感谢您的参与！</p>
           </div>
-        )}
+        )} */}
 
         {/* User Status */}
         {isEliminated && (
@@ -309,7 +302,9 @@ export default function PlayPage() {
               <Trophy className="w-8 h-8 text-yellow-600" />
             </div>
             <h2 className="text-xl font-bold text-yellow-900 mb-2">平局</h2>
-            <p className="text-yellow-700">恭喜您进入决赛圈，请上台进行最后对决！</p>
+            <p className="text-yellow-700">
+              恭喜您进入决赛圈，请上台进行最后对决！
+            </p>
           </div>
         )}
 
@@ -327,82 +322,84 @@ export default function PlayPage() {
         )}
 
         {/* Question Area */}
-        {currentQuestion && gameState.status === "playing" && !isEliminated && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-8 animate-slide-up">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-primary text-black rounded-full text-sm font-medium mb-4">
-                <Target className="w-4 h-4" />第 {gameState.round} 题
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                {currentQuestion.question}
-              </h2>
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-6">
-                <TrendingDown className="w-4 h-4" />
-                <span>选择人数较少的选项晋级</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <button
-                onClick={() => handleSubmitAnswer("A")}
-                disabled={!!selectedOption || gameState.timeLeft <= 0}
-                className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
-                  selectedOption === "A"
-                    ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"
-                    : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30"
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
-                      selectedOption === "A"
-                        ? "bg-purple-500 text-white"
-                        : "bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700"
-                    }`}
-                  >
-                    A
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="text-gray-900 font-medium">
-                      {currentQuestion.optionA}
-                    </p>
-                  </div>
-                  {selectedOption === "A" && (
-                    <CheckCircle className="w-6 h-6 text-purple-500" />
-                  )}
+        {gameState.currentQuestion &&
+          gameState.status === "playing" &&
+          !isEliminated && (
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-8 animate-slide-up">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-primary text-black rounded-full text-sm font-medium mb-4">
+                  <Target className="w-4 h-4" />第 {gameState.round} 题
                 </div>
-              </button>
-
-              <button
-                onClick={() => handleSubmitAnswer("B")}
-                disabled={!!selectedOption || gameState.timeLeft <= 0}
-                className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
-                  selectedOption === "B"
-                    ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"
-                    : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30"
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
-                      selectedOption === "B"
-                        ? "bg-purple-500 text-white"
-                        : "bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700"
-                    }`}
-                  >
-                    B
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="text-gray-900 font-medium">
-                      {currentQuestion.optionB}
-                    </p>
-                  </div>
-                  {selectedOption === "B" && (
-                    <CheckCircle className="w-6 h-6 text-purple-500" />
-                  )}
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  {gameState.currentQuestion.question}
+                </h2>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-6">
+                  <TrendingDown className="w-4 h-4" />
+                  <span>选择人数较少的选项晋级</span>
                 </div>
-              </button>
-            </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <button
+                  onClick={() => handleSubmitAnswer("A")}
+                  disabled={!!selectedOption || gameState.timeLeft <= 0}
+                  className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
+                    selectedOption === "A"
+                      ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"
+                      : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
+                        selectedOption === "A"
+                          ? "bg-purple-500 text-white"
+                          : "bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700"
+                      }`}
+                    >
+                      A
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-gray-900 font-medium">
+                        {gameState.currentQuestion.optionA}
+                      </p>
+                    </div>
+                    {selectedOption === "A" && (
+                      <CheckCircle className="w-6 h-6 text-purple-500" />
+                    )}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleSubmitAnswer("B")}
+                  disabled={!!selectedOption || gameState.timeLeft <= 0}
+                  className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
+                    selectedOption === "B"
+                      ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"
+                      : "border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
+                        selectedOption === "B"
+                          ? "bg-purple-500 text-white"
+                          : "bg-gray-100 text-gray-700 group-hover:bg-purple-100 group-hover:text-purple-700"
+                      }`}
+                    >
+                      B
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-gray-900 font-medium">
+                        {gameState.currentQuestion.optionB}
+                      </p>
+                    </div>
+                    {selectedOption === "B" && (
+                      <CheckCircle className="w-6 h-6 text-purple-500" />
+                    )}
+                  </div>
+                </button>
+              </div>
 
             {selectedOption && (
               <div className="text-center p-4 bg-green-50 border border-green-200 rounded-xl animate-scale-in">
