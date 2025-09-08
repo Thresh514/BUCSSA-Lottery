@@ -13,26 +13,33 @@ import {
   Target,
   Wifi,
   WifiOff,
-  Monitor,
   LogOut,
 } from "lucide-react";
 import {
   GameState,
-  MinorityQuestion,
-  NewQuestion,
-  RoundResult,
-  GameEnded,
+  hasWinner,
+  hasTie,
 } from "@/types";
 import { formatTime } from "@/lib/utils";
 
 export default function ShowPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState<NewQuestion | null>(null);
-  const [lastResult, setLastResult] = useState<RoundResult | null>(null);
-  const [gameEnded, setGameEnded] = useState<GameEnded | null>(null);
+  const [gameState, setGameState] = useState<GameState>(
+    {
+      status: "waiting",
+      currentQuestion: null,
+      round: 0,
+      timeLeft: 0,
+      survivorsCount: 0,
+      eliminatedCount: 0,
+      userAnswer: null,
+      roundResult: null,
+    } 
+  );
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [winner, setWinner] = useState<string | null>(null);
+  const [tie, setTie] = useState<string[] | null>(null);
   
   // 前端倒计时状态
   const [frontendTimeLeft, setFrontendTimeLeft] = useState<number>(0);
@@ -71,11 +78,11 @@ export default function ShowPage() {
 
   // 当收到新题目时，启动题目倒计时
   useEffect(() => {
-    if (currentQuestion?.timeLeft !== undefined) {
-      setFrontendTimeLeft(currentQuestion.timeLeft);
+    if (gameState?.timeLeft !== undefined) {
+      setFrontendTimeLeft(gameState.timeLeft);
       setCountdownActive(true);
     }
-  }, [currentQuestion?.timeLeft]);
+  }, [gameState?.timeLeft]);
 
   // 检查用户权限
   useEffect(() => {
@@ -114,29 +121,38 @@ export default function ShowPage() {
           setSocket(newSocket);
         });
 
+        newSocket.on("game_start", (data: GameState) => {
+          console.log("📺 Received game_start:", data);
+          setGameState(data);
+        });
+
+        newSocket.on("game_reset", (data: GameState) => {
+          setGameState(data);
+        });
+
         newSocket.on("game_state", (data: GameState) => {
           console.log("📺 Received game_state:", data);
           setGameState(data);
         });
 
-        newSocket.on("new_question", (data: NewQuestion) => {
+        newSocket.on("new_question", (data: GameState) => {
           console.log("📺 Received new_question:", data);
-          setCurrentQuestion(data);
-          setLastResult(null);
-          setGameEnded(null);
+          setGameState(data);
           // 重置倒计时
           setCountdownActive(false);
         });
 
-        newSocket.on("round_result", (data: RoundResult) => {
-          console.log("📺 Received round_result:", data);
-          setLastResult(data);
+        newSocket.on("tie", (data: hasTie) => {
+          console.log("📺 Received game_tie:", data.finalists);
+          setTie(data.finalists);
+          // 停止倒计时
+          setCountdownActive(false);
+          setFrontendTimeLeft(0);
         });
 
-        newSocket.on("game_end", (data: GameEnded) => {
-          console.log("📺 Received game_end:", data);
-          setGameEnded(data);
-          setCurrentQuestion(null);
+        newSocket.on("winner", (data: hasWinner) => {
+          console.log("📺 Received winner:", data.winnerEmail);
+          setWinner(data.winnerEmail);
           // 停止倒计时
           setCountdownActive(false);
           setFrontendTimeLeft(0);
@@ -287,7 +303,7 @@ export default function ShowPage() {
                 </div>
                 <div>
                   <p className="text-3xl font-bold text-white">
-                    {gameState.survivorsCount + gameState.eliminatedCount}
+                    {(gameState.survivorsCount || 0) + (gameState.eliminatedCount || 0)}
                   </p>
                   <p className="text-gray-400 text-sm">总参与人数</p>
                 </div>
@@ -317,7 +333,7 @@ export default function ShowPage() {
         )}
 
         {/* 当前题目显示 */}
-        {currentQuestion && (
+        {gameState.currentQuestion && gameState.status === "playing" && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -325,10 +341,10 @@ export default function ShowPage() {
           >
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full text-white font-medium mb-6">
-                <Trophy className="w-5 h-5" />第 {currentQuestion.round} 题
+                <Trophy className="w-5 h-5" />第 {gameState.round} 题
               </div>
               <h2 className="text-4xl font-bold text-white mb-8">
-                {currentQuestion.question}
+                {gameState.currentQuestion.question}
               </h2>
             </div>
 
@@ -339,7 +355,7 @@ export default function ShowPage() {
                     <span className="text-white font-bold text-2xl">A</span>
                   </div>
                   <p className="text-white text-2xl font-medium">
-                    {currentQuestion.question.optionA}
+                    {gameState.currentQuestion?.optionA}
                   </p>
                 </div>
               </div>
@@ -350,7 +366,7 @@ export default function ShowPage() {
                     <span className="text-white font-bold text-2xl">B</span>
                   </div>
                   <p className="text-white text-2xl font-medium">
-                    {currentQuestion.question.optionB}
+                    {gameState.currentQuestion?.optionB}
                   </p>
                 </div>
               </div>
@@ -373,7 +389,7 @@ export default function ShowPage() {
         )}
 
         {/* 等待状态 */}
-        {gameState?.status === "waiting" && !currentQuestion && (
+        {gameState.status === "waiting" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -386,15 +402,14 @@ export default function ShowPage() {
             <p className="text-xl text-gray-300 mb-4">等待管理员开始游戏...</p>
             {gameState.survivorsCount + gameState.eliminatedCount > 0 && (
               <p className="text-lg text-blue-300">
-                当前已有 {gameState.survivorsCount + gameState.eliminatedCount}{" "}
-                名玩家加入
+                当前已有 {gameState.survivorsCount + gameState.eliminatedCount}{" "}名玩家加入
               </p>
             )}
           </motion.div>
         )}
 
         {/* 游戏结束 */}
-        {gameEnded && (
+        {gameState.status === "ended" && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -407,27 +422,27 @@ export default function ShowPage() {
               🎉 游戏结束
             </h2>
             
-            {gameEnded.winnerEmail ? (
+            {winner ? (
               <div className="space-y-6">
                 <div className="text-3xl text-white mb-4">恭喜获胜者！</div>
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-8 py-4 rounded-2xl inline-block">
-                  <div className="text-4xl font-bold">🏆 {gameEnded.winnerEmail} 🏆</div>
+                  <div className="text-4xl font-bold">🏆 {winner} 🏆</div>
                 </div>
                 <div className="text-xl text-gray-300">获得第一名！</div>
               </div>
-            ) : gameEnded.finalists ? (
+            ) : tie ? (
               <div className="space-y-6">
               <div className="text-3xl text-white mb-6">请两位选手上台PK！</div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-6 rounded-2xl">
                   <div className="text-2xl font-bold mb-2">选手 1</div>
-                  <div className="text-xl">{gameEnded.finalists[0]}</div>
+                  <div className="text-xl">{tie[0]}</div>
                 </div>
                 
                 <div className="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-6 rounded-2xl">
                   <div className="text-2xl font-bold mb-2">选手 2</div>
-                  <div className="text-xl">{gameEnded.finalists[1]}</div>
+                  <div className="text-xl">{tie[1]}</div>
                 </div>
               </div>
               
@@ -457,6 +472,33 @@ export default function ShowPage() {
               连接游戏服务器中
             </h2>
             <p className="text-xl text-gray-300">正在获取游戏状态...</p>
+          </motion.div>
+        )}
+
+        {/* 在每局游戏中间展示本轮少数派答案和统计 */}
+        {gameState.roundResult && gameState?.status === "waiting" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/10 backdrop-blur-lg rounded-3xl p-16 text-center"
+          >
+            <div className="text-3xl font-bold text-yellow-300 mb-4">
+              本轮少数派答案：{gameState.roundResult.minorityAnswer === "A" ? "A" : "B"}
+            </div>
+            <div className="flex flex-col md:flex-row justify-center gap-8 mb-4">
+              <div className="bg-blue-500/80 rounded-xl px-8 py-4 text-white text-xl font-semibold">
+                选择A人数：{gameState.roundResult.answers.A}
+              </div>
+              <div className="bg-pink-500/80 rounded-xl px-8 py-4 text-white text-xl font-semibold">
+                选择B人数：{gameState.roundResult.answers.B}
+              </div>
+            </div>
+            <div className="text-lg text-white mb-2">
+              本轮存活人数：<span className="font-bold text-green-300">{gameState.roundResult.survivorsCount}</span>
+            </div>
+            <div className="text-lg text-white">
+              本轮淘汰人数：<span className="font-bold text-red-300">{gameState.roundResult.eliminatedCount}</span>
+            </div>
           </motion.div>
         )}
       </div>

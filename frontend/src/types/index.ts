@@ -39,6 +39,7 @@ export interface GameState {
   survivorsCount: number;
   eliminatedCount: number;
   userAnswer: 'A' | 'B' | null;
+  roundResult: RoundResult | null;
 }
 
 // 轮次结果消息
@@ -56,29 +57,11 @@ export interface AnswerSubmission {
   answer: 'A' | 'B';
 }
 
-// 轮次统计
-export interface RoundStats {
-  question: MinorityQuestion;
-  answers: { A: number; B: number };
-  totalAnswers: number;
-  survivorsCount: number;
-}
-
-export interface GameStats {
-  totalPlayers: number;
-  survivorsCount: number;
-  eliminatedCount: number;
-  currentRound: number;
-  status: string;
-  timeLeft: number;
-  roundStats?: RoundStats;
-}
-
-export interface Winner {
+export interface hasWinner {
   winnerEmail: string | null;
 }
 
-export interface Tie {
+export interface hasTie {
   finalists: string[] | null;
 }
 
