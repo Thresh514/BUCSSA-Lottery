@@ -73,11 +73,22 @@ export interface GameStats {
   roundStats?: RoundStats;
 }
 
+export interface Winner {
+  winnerEmail: string | null;
+}
+
+export interface Tie {
+  finalists: string[] | null;
+}
+
+export interface Eliminated {
+  userId: string;
+}
+
 // 游戏结束消息
 export interface GameEnded {
   winnerEmail: string | null;
-  tie: boolean;
-  finalists: string[];
+  finalists: string[] | null;
 }
 
 // JWT Payload

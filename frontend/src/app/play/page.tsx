@@ -21,13 +21,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import {
-  MinorityQuestion,
-  GameState,
-  RoundResult,
-  NewQuestion,
-  GameEnded,
-} from "@/types";
+import { MinorityQuestion, GameState, RoundResult, NewQuestion, Winner, Tie, Eliminated } from "@/types";
 
 export default function PlayPage() {
   const { data: session, status } = useSession();
@@ -39,13 +33,11 @@ export default function PlayPage() {
     survivorsCount: 0,
     eliminatedCount: 0,
   });
-  const [currentQuestion, setCurrentQuestion] =
-    useState<MinorityQuestion | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<MinorityQuestion | null>(null);
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
   const [isEliminated, setIsEliminated] = useState(false);
   const [isWinner, setIsWinner] = useState(false);
   const [isTie, setIsTie] = useState(false);
-  const [message, setMessage] = useState("");
   const [connected, setConnected] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
@@ -76,150 +68,93 @@ export default function PlayPage() {
     if (status === "unauthenticated") {
       return;
     }
-
     if (!session?.user?.email) {
       return;
     }
-
     if (session.user.isAdmin) {
       return;
     }
-
     const socket = io(process.env.NEXT_PUBLIC_API_BASE!, {
       auth: {
         email: session.user.email,
       },
     });
-
     socketRef.current = socket;
-
     socket.on("connect", () => {
       setConnected(true);
     });
-
     socket.on("disconnect", () => {
       setConnected(false);
     });
-
     socket.on("game_start", (data: GameState) => {
       setGameState(data);
       setCurrentQuestion(null);
-      console.log(
-        "🔄 setSelectedOption called by 'game_start' event, setting to: ''"
-      );
+      console.log("🔄 setSelectedOption called by 'game_start' event");
       setSelectedOption("");
       setIsWinner(false);
       setIsEliminated(false);
-      setMessage("");
+      setIsTie(false);
     });
-
     socket.on("game_state", (data: GameState) => {
       setGameState(data);
       setCurrentQuestion(data.currentQuestion);
-    });
+      setGameState((prev) => ({
+        ...prev,
+        ...data,
+        status: "waiting",
+        eliminatedCount: prev.eliminatedCount + data.eliminatedCount,
+    }));
 
-    socket.on("new_question", (data: NewQuestion) => {
-      setCurrentQuestion(data.question);
+    socket.on("new_question", (data: GameState) => {
+      setCurrentQuestion(data.currentQuestion);
       console.log(
         "🔄 setSelectedOption called by 'new_question' event, setting to: ''"
       );
       setSelectedOption("");
       setGameState((prev) => ({
-        ...prev,
+        ...prev, 
         status: "playing",
         round: data.round,
         timeLeft: data.timeLeft,
         survivorsCount: data.survivorsCount,
       }));
-      setMessage("");
     });
 
     // use AnswerSubmission here (need to refactor)
     // backend checks if the answer is for the current question, so no checking is done on frontend, still LOWKEY DANGEROUS
-    socket.on(
-      "user_answer",
-      (data: { questionId: string; answer: "A" | "B" }) => {
-        console.log(
-          `🔄 setSelectedOption called by 'user_answer' event, setting to: '${data.answer}'`
-        );
+    socket.on("user_answer",(data: { questionId: string; answer: "A" | "B" }) => {
+        console.log(`🔄 setSelectedOption called by 'user_answer' event, setting to: '${data.answer}'`);
         if (data.questionId === currentQuestion?.id) {
-          console.log(
-            "Answer matches current question, updating selectedOption."
-          );
+          console.log("Answer matches current question, updating selectedOption.");
           setSelectedOption(data.answer);
         }
-      }
-    );
-
-    socket.on("countdown", (data: { timeLeft: number }) => {
-      setGameState((prev) => ({
-        ...prev,
-        timeLeft: data.timeLeft,
-      }));
+      });
     });
-
-    socket.on("round_result", (data: RoundResult) => {
-      const minorityText = data.minorityAnswer === "A" ? "A" : "B";
-      const majorityText = data.majorityAnswer === "A" ? "B" : "A";
-      setMessage(
-        `少数派选项是 ${minorityText}，多数派选项是 ${majorityText}，本轮淘汰 ${data.eliminatedCount} 人，剩余 ${data.survivorsCount} 人`
-      );
-      setGameState((prev) => ({
-        ...prev,
-        status: "waiting",
-        survivorsCount: data.survivorsCount,
-        eliminatedCount: gameState.eliminatedCount + data.eliminatedCount,
-      }));
-    });
-
-    socket.on("eliminated", (data: any) => {
+    socket.on("eliminated", (data: Eliminated) => {
       if (data.userId === session.user?.email) {
         setIsEliminated(true);
-        setMessage("很遗憾，您已被淘汰！");
       }
     });
-
-    socket.on("winner", (data: any) => {
-      if (data.userId === session.user?.email) {
-        setIsWinner(true);
-        setMessage("🎉 恭喜您获得第一名！");
-      }
-    });
-
-    socket.on("tie", (data: any) => {
-      if (data.userId === session.user?.email) {
-        setIsTie(true);
-        setMessage("平局");
-      }
-    });
-
-    socket.on("game_end", (data: GameEnded) => {
-      setGameState((prev) => ({ ...prev, status: "ended" }));
+    socket.on("winner", (data: Winner) => {
       if (data.winnerEmail === session.user?.email) {
         setIsWinner(true);
-        setMessage("🎉 恭喜您获得第一名！");
-      } else if (data.tie && data.finalists.includes(session.user?.email || "")) {
-        setIsTie(true);
-        setMessage(`平局，是${data.finalists.join(", ")}进入决赛圈`);
-      }
-      else if (data.winnerEmail) {
-        setIsEliminated(true);
-        setMessage(`游戏结束！获胜者是 ${data.winnerEmail}`);
-      } else {
-        setIsEliminated(true);
-        setMessage("游戏结束！");
       }
     });
+    socket.on("tie", (data: Tie) => {
+      if (data.finalists?.includes(session.user?.email || "")) {
+        setIsTie(true);
 
+      }
+    });
     socket.on("error", (data: any) => {
       console.error("Socket 错误:", data);
-      setMessage(data.message);
     });
 
     return () => {
+      socket.removeAllListeners();
       socket.disconnect();
     };
-  }, [router, gameState.eliminatedCount, session, status]);
+  }, [status, session?.user?.email, session?.user?.isAdmin]);
 
   const handleSubmitAnswer = async (option: "A" | "B") => {
     if (!currentQuestion || isEliminated || selectedOption) return;
@@ -241,17 +176,12 @@ export default function PlayPage() {
         }
       );
 
-      const data = await response.json();
-
       if (response.ok) {
-        setMessage(`您选择了选项 ${option}，请等待结果...`);
       } else {
-        setMessage(data.error || "提交答案失败");
         setSelectedOption("");
       }
     } catch (error) {
       console.error("提交答案错误:", error);
-      setMessage("网络错误，请稍后重试");
       setSelectedOption("");
     }
   };
@@ -338,43 +268,6 @@ export default function PlayPage() {
       </header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* Game Stats */}
-        <div className="grid grid-cols-2 gap-4 animate-fade-in">
-          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">
-                  {gameState.round}
-                </p>
-                <p className="text-sm text-gray-600">当前轮次</p>
-              </div>
-            </div>
-          </div> */}
-
-          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p
-                  className={`text-2xl font-bold ${
-                    gameState.timeLeft <= 10
-                      ? "text-red-600 animate-pulse"
-                      : "text-orange-600"
-                  }`}
-                >
-                  {formatTime(gameState.timeLeft)}
-                </p>
-                <p className="text-sm text-gray-600">剩余时间</p>
-              </div>
-            </div>
-          </div> */}
-        </div>
-
         {gameState.status === "ended" && (
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 text-center animate-slide-up">
             <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -523,17 +416,8 @@ export default function PlayPage() {
             )}
           </div>
         )}
-
-        {/* Message Display */}
-        {/* {message && (
-          <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 text-center animate-scale-in">
-            <div className="flex items-center justify-center gap-2 text-gray-700">
-              <AlertCircle className="w-5 h-5" />
-              <span className="font-medium">{message}</span>
-            </div>
-          </div>
-        )} */}
       </main>
     </div>
   );
+
 }

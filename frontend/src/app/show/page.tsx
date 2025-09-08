@@ -29,9 +29,7 @@ export default function ShowPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState<NewQuestion | null>(
-    null
-  );
+  const [currentQuestion, setCurrentQuestion] = useState<NewQuestion | null>(null);
   const [lastResult, setLastResult] = useState<RoundResult | null>(null);
   const [gameEnded, setGameEnded] = useState<GameEnded | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -185,8 +183,6 @@ export default function ShowPage() {
       // 停止倒计时
       setCountdownActive(false);
       setFrontendTimeLeft(0);
-      // 清除所有状态
-      setGameEnded(null);
       await signOut({ callbackUrl: "/login" });
     } catch (error) {
       console.error("Logout error:", error);
@@ -419,7 +415,7 @@ export default function ShowPage() {
                 </div>
                 <div className="text-xl text-gray-300">获得第一名！</div>
               </div>
-            ) : gameEnded.tie ? (
+            ) : gameEnded.finalists ? (
               <div className="space-y-6">
               <div className="text-3xl text-white mb-6">请两位选手上台PK！</div>
               

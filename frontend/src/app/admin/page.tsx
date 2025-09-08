@@ -204,13 +204,13 @@ export default function AdminPage() {
       fetchGameStats();
     });
 
-    socket.on("game_ended", (data: GameEnded) => {
+    socket.on("game_end", (data: GameEnded) => {
       setMessage(`游戏已结束！获胜者：${data.winnerEmail || "无"}`);
       fetchGameStats();
     });
 
     socket.on("game_tie", (data: GameEnded) => {
-      setMessage(`游戏已结束！平局：${data.finalists.join(", ")}`);
+      setMessage(`游戏已结束！平局：${data.finalists?.join(", ")}`);
       fetchGameStats();
     });
 
