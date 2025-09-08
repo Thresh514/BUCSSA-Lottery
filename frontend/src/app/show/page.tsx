@@ -69,20 +69,20 @@ export default function ShowPage() {
   }, [countdownActive, frontendTimeLeft]);
 
   // 当收到新的游戏状态时，启动前端倒计时
-  useEffect(() => {
-    if (gameState?.timeLeft !== undefined) {
-      setFrontendTimeLeft(gameState.timeLeft);
-      setCountdownActive(true);
-    }
-  }, [gameState?.timeLeft]);
+  //useEffect(() => {
+    //if (gameState.timeLeft !== null) {
+    //setFrontendTimeLeft(gameState.timeLeft);
+    //setCountdownActive(true);
+    //}
+  //}, [gameState.timeLeft]);
 
   // 当收到新题目时，启动题目倒计时
   useEffect(() => {
-    if (gameState?.timeLeft !== undefined) {
+    if (gameState.timeLeft !== null) {
       setFrontendTimeLeft(gameState.timeLeft);
       setCountdownActive(true);
     }
-  }, [gameState?.timeLeft]);
+  }, [gameState.timeLeft]);
 
   // 检查用户权限
   useEffect(() => {

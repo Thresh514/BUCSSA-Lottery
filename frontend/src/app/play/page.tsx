@@ -113,12 +113,6 @@ export default function PlayPage() {
       setGameState(data);
     });
 
-    socket.on("round_result", (data: GameState) => {
-      console.log("round_result received:", data);
-      setGameState(data);
-      setSelectedOption(data.userAnswer || "");
-    });
-
     socket.on("eliminated", (data: any) => {
       if (data.userId === session.user?.email) {
         setIsEliminated(true);
@@ -275,53 +269,6 @@ export default function PlayPage() {
       </header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* Game Stats */}
-        <div className="grid grid-cols-2 gap-4 animate-fade-in">
-          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">
-                  {gameState.round}
-                </p>
-                <p className="text-sm text-gray-600">当前轮次</p>
-              </div>
-            </div>
-          </div> */}
-
-          {/* <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-gray-200/50">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p
-                  className={`text-2xl font-bold ${
-                    gameState.timeLeft <= 10
-                      ? "text-red-600 animate-pulse"
-                      : "text-orange-600"
-                  }`}
-                >
-                  {formatTime(gameState.timeLeft)}
-                </p>
-                <p className="text-sm text-gray-600">剩余时间</p>
-              </div>
-            </div>
-          </div> */}
-        </div>
-
-        {/* {gameState.status === "ended" && (
-          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 text-center animate-slide-up">
-            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Crown className="w-8 h-8 text-yellow-600" />
-            </div>
-            <h2 className="text-xl font-bold text-yellow-900 mb-2">游戏结束</h2>
-            <p className="text-yellow-700">本轮游戏已结束，感谢您的参与！</p>
-          </div>
-        )} */}
-
         {/* User Status */}
         {isEliminated && (
           <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6 text-center animate-slide-up">
@@ -373,9 +320,7 @@ export default function PlayPage() {
         )}
 
         {/* Question Area */}
-        {gameState.currentQuestion &&
-          gameState.status === "playing" &&
-          !isEliminated && (
+        {gameState.currentQuestion && gameState.status === "playing" && !isEliminated && (
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-8 animate-slide-up">
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-primary text-black rounded-full text-sm font-medium mb-4">
