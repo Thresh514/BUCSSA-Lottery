@@ -156,7 +156,7 @@ export class GameManager {
     const survivors = await redis.sMembers(RedisKeys.roomSurvivors(this.roomId)) as string[];
     if (!survivors) return;
 
-    if (survivors.length === 2) {
+    /*if (survivors.length === 2) {
       // 进入决赛圈 - 直接宣布赢家
       const answers: { [key: string]: string[] } = { A: [], B: [] };
       for (const userEmail of survivors) {
@@ -182,7 +182,7 @@ export class GameManager {
         // Same choice or one didn't answer - continue game
         await redis.hSet(RedisKeys.gameState(this.roomId), 'status', 'waiting');
       }
-    }
+    }*/
 
     const answers: { [key: string]: number } = { A: 0, B: 0 };
 
@@ -228,8 +228,11 @@ export class GameManager {
     if (!remainingSurvivors) return;
 
     console.log('剩余存活用户:', remainingSurvivors);
-    
-    if (remainingSurvivors.length <= 1) {
+    if(remainingSurvivors.length === 2) {
+      await this.endGameWithTie(remainingSurvivors);
+      return;
+    }
+    else if (remainingSurvivors.length <= 1) {
       // 游戏结束
       const winner = remainingSurvivors.length === 1 ? remainingSurvivors[0] : null;
       await this.endGame(winner);
@@ -264,6 +267,20 @@ export class GameManager {
     // 广播游戏结束
     if (this.io) {
       this.io.to(this.roomId).emit('game_end', { winnerEmail: winner });
+    }
+  }
+
+  // 平局情况 - 两个人都保留，继续游戏
+  async endGameWithTie(survivors: string[]): Promise<void> {
+    await redis.hSet(RedisKeys.gameState(this.roomId), 'status', 'ended');
+    await redis.hSet(RedisKeys.gameState(this.roomId), 'timeLeft', '0');
+    
+    if (survivors.length === 2) {
+      await redis.set(RedisKeys.gameTie(this.roomId), survivors.join(','));
+    }
+    // 广播平局结果
+    if (this.io) {
+      this.io.to(this.roomId).emit('game_tie', {finalists: survivors});
     }
   }
 

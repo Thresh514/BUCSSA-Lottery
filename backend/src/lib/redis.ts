@@ -48,6 +48,9 @@ export const RedisKeys = {
   
   // 用户在线状态
   userOnline: (email: string) => `user:${email}:online`,
+
+  // 游戏平局状态
+  gameTie: (roomId: string) => `game:${roomId}:tie`,
   
   // 游戏获胜者
   gameWinner: (roomId: string) => `game:${roomId}:winner`,

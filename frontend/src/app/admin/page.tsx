@@ -209,6 +209,11 @@ export default function AdminPage() {
       fetchGameStats();
     });
 
+    socket.on("game_tie", (data: GameEnded) => {
+      setMessage(`游戏已结束！平局：${data.finalists.join(", ")}`);
+      fetchGameStats();
+    });
+
     socket.on("game_reset", () => {
       setMessage("游戏已重置");
       setCurrentQuestion(null);

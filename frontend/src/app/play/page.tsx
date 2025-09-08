@@ -44,6 +44,7 @@ export default function PlayPage() {
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
   const [isEliminated, setIsEliminated] = useState(false);
   const [isWinner, setIsWinner] = useState(false);
+  const [isTie, setIsTie] = useState(false);
   const [message, setMessage] = useState("");
   const [connected, setConnected] = useState(false);
 
@@ -185,12 +186,23 @@ export default function PlayPage() {
       }
     });
 
+    socket.on("tie", (data: any) => {
+      if (data.userId === session.user?.email) {
+        setIsTie(true);
+        setMessage("平局");
+      }
+    });
+
     socket.on("game_end", (data: GameEnded) => {
       setGameState((prev) => ({ ...prev, status: "ended" }));
       if (data.winnerEmail === session.user?.email) {
         setIsWinner(true);
         setMessage("🎉 恭喜您获得第一名！");
-      } else if (data.winnerEmail) {
+      } else if (data.tie && data.finalists.includes(session.user?.email || "")) {
+        setIsTie(true);
+        setMessage(`平局，是${data.finalists.join(", ")}进入决赛圈`);
+      }
+      else if (data.winnerEmail) {
         setIsEliminated(true);
         setMessage(`游戏结束！获胜者是 ${data.winnerEmail}`);
       } else {
@@ -395,6 +407,16 @@ export default function PlayPage() {
             <p className="text-green-700">
               您是本轮游戏的冠军！感谢您的精彩表现！
             </p>
+          </div>
+        )}
+
+        {isTie && (
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6 text-center animate-slide-up">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h2 className="text-xl font-bold text-yellow-900 mb-2">平局</h2>
+            <p className="text-yellow-700">恭喜您进入决赛圈，请上台进行最后对决！</p>
           </div>
         )}
 

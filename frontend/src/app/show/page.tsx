@@ -35,6 +35,49 @@ export default function ShowPage() {
   const [lastResult, setLastResult] = useState<RoundResult | null>(null);
   const [gameEnded, setGameEnded] = useState<GameEnded | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  
+  // 前端倒计时状态
+  const [frontendTimeLeft, setFrontendTimeLeft] = useState<number>(0);
+  const [countdownActive, setCountdownActive] = useState<boolean>(false);
+
+  // 前端倒计时逻辑
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (countdownActive && frontendTimeLeft > 0) {
+      interval = setInterval(() => {
+        setFrontendTimeLeft((prev) => {
+          if (prev <= 1) {
+            setCountdownActive(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [countdownActive, frontendTimeLeft]);
+
+  // 当收到新的游戏状态时，启动前端倒计时
+  useEffect(() => {
+    if (gameState?.timeLeft !== undefined) {
+      setFrontendTimeLeft(gameState.timeLeft);
+      setCountdownActive(true);
+    }
+  }, [gameState?.timeLeft]);
+
+  // 当收到新题目时，启动题目倒计时
+  useEffect(() => {
+    if (currentQuestion?.timeLeft !== undefined) {
+      setFrontendTimeLeft(currentQuestion.timeLeft);
+      setCountdownActive(true);
+    }
+  }, [currentQuestion?.timeLeft]);
 
   // 检查用户权限
   useEffect(() => {
@@ -83,6 +126,8 @@ export default function ShowPage() {
           setCurrentQuestion(data);
           setLastResult(null);
           setGameEnded(null);
+          // 重置倒计时
+          setCountdownActive(false);
         });
 
         newSocket.on("round_result", (data: RoundResult) => {
@@ -90,10 +135,13 @@ export default function ShowPage() {
           setLastResult(data);
         });
 
-        newSocket.on("game_ended", (data: GameEnded) => {
-          console.log("📺 Received game_ended:", data);
+        newSocket.on("game_end", (data: GameEnded) => {
+          console.log("📺 Received game_end:", data);
           setGameEnded(data);
           setCurrentQuestion(null);
+          // 停止倒计时
+          setCountdownActive(false);
+          setFrontendTimeLeft(0);
         });
 
         newSocket.on("disconnect", (reason: string) => {
@@ -134,6 +182,11 @@ export default function ShowPage() {
       if (socket) {
         socket.disconnect();
       }
+      // 停止倒计时
+      setCountdownActive(false);
+      setFrontendTimeLeft(0);
+      // 清除所有状态
+      setGameEnded(null);
       await signOut({ callbackUrl: "/login" });
     } catch (error) {
       console.error("Logout error:", error);
@@ -159,7 +212,7 @@ export default function ShowPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-between w-full px-4">
-              <h1 className="text-2xl font-semibold tracking-wide">国庆抽奖</h1>
+              <h1 className="text-2xl font-semibold tracking-wide">BUCSSA 国庆晚会抽奖</h1>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center">
                   {socket ? (
@@ -253,12 +306,12 @@ export default function ShowPage() {
                 <div>
                   <p
                     className={`text-3xl font-bold ${
-                      gameState.timeLeft <= 10
+                      frontendTimeLeft <= 10
                         ? "text-red-400 animate-pulse"
                         : "text-white"
                     }`}
                   >
-                    {formatTime(gameState.timeLeft)}
+                    {formatTime(frontendTimeLeft)}
                   </p>
                   <p className="text-gray-400 text-sm">剩余时间</p>
                 </div>
@@ -311,12 +364,12 @@ export default function ShowPage() {
             <div className="text-center mt-12">
               <div
                 className={`text-8xl font-mono font-bold ${
-                  currentQuestion.timeLeft <= 10
+                  frontendTimeLeft <= 10
                     ? "text-red-400 animate-pulse"
                     : "text-yellow-400"
                 }`}
               >
-                {Math.max(0, currentQuestion.timeLeft)}
+                {Math.max(0, frontendTimeLeft)}
               </div>
               <div className="text-2xl text-gray-300 mt-4">秒</div>
             </div>
@@ -357,10 +410,38 @@ export default function ShowPage() {
             <h2 className="text-5xl font-bold mb-8 text-yellow-400">
               🎉 游戏结束
             </h2>
-            <div className="text-3xl mb-6 text-white">{}</div>
-            {gameEnded.winnerEmail && (
-              <div className="text-2xl text-green-400">
-                🏆 获胜者: {gameEnded.winnerEmail}
+            
+            {gameEnded.winnerEmail ? (
+              <div className="space-y-6">
+                <div className="text-3xl text-white mb-4">恭喜获胜者！</div>
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-8 py-4 rounded-2xl inline-block">
+                  <div className="text-4xl font-bold">🏆 {gameEnded.winnerEmail} 🏆</div>
+                </div>
+                <div className="text-xl text-gray-300">获得第一名！</div>
+              </div>
+            ) : gameEnded.tie ? (
+              <div className="space-y-6">
+              <div className="text-3xl text-white mb-6">请两位选手上台PK！</div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-6 rounded-2xl">
+                  <div className="text-2xl font-bold mb-2">选手 1</div>
+                  <div className="text-xl">{gameEnded.finalists[0]}</div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-6 rounded-2xl">
+                  <div className="text-2xl font-bold mb-2">选手 2</div>
+                  <div className="text-xl">{gameEnded.finalists[1]}</div>
+                </div>
+              </div>
+              
+              <div className="text-2xl text-yellow-300 mt-8">
+                🎯 准备进行最终对决！
+              </div>
+            </div>
+            ) : (
+              <div className="text-3xl text-white">
+                没有获胜者
               </div>
             )}
           </motion.div>
