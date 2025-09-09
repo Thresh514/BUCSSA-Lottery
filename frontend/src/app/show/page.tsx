@@ -110,6 +110,15 @@ export default function ShowPage() {
       setSocket(socket);
     });
 
+    socket.on("player_count_update", (data: GameState) => {
+      console.log("📺 Received player_count:", data);
+      setGameState((prev) => ({
+        ...prev,
+        survivorsCount: data.survivorsCount,
+        eliminatedCount: data.eliminatedCount,
+      }));
+    });
+
     socket.on("game_start", (data: GameState) => {
       console.log("📺 Received game_start:", data);
       setGameState(data);

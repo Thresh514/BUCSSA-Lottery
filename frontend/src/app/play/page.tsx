@@ -21,7 +21,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import { GameState, RoundResult, NewQuestion, GameEnded } from "@/types";
+import { GameState } from "@/types";
 
 export default function PlayPage() {
   const { data: session, status } = useSession();
@@ -130,7 +130,8 @@ export default function PlayPage() {
     });
 
     socket.on("eliminated", (data: any) => {
-      if (data.userId === session.user?.email) {
+      console.log("eliminated event data:", data);
+      if (data.eliminated.includes(session.user?.email || "")) {
         setIsEliminated(true);
       }
     });
@@ -292,7 +293,10 @@ export default function PlayPage() {
           </p>
           <p>Game Status: {gameState.status}</p>
           <p>
-            Has Current Question: {gameState.currentQuestion ? "Yes" : "No"}
+            Current Question:{" "}
+            {gameState.currentQuestion
+              ? gameState.currentQuestion.question
+              : "None"}
           </p>
           <p>Is Eliminated: {isEliminated ? "Yes" : "No"}</p>
           <p>Is Winner: {isWinner ? "Yes" : "No"}</p>

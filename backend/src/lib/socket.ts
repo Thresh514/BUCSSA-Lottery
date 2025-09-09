@@ -64,9 +64,10 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     const tieSet = await redis.get(RedisKeys.gameTie(roomId))
     const isTie = tieSet?.includes(user.email);
 
-    if (!isInGame && !isEliminated && !isAdmin) {
+    if (!isInGame && !isEliminated && !isAdmin && !isDisplay) {
       // 新用户加入游戏
       await gameManager.addPlayer(user.email);
+      gameManager.emitPlayerCountUpdate();
     }
 
     const roomState = await gameManager.getRoomState();
@@ -91,10 +92,10 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         socket.emit("game_state", { ...roomState, userAnswer: null });
       } else if (isEliminated) {
         socket.emit('eliminated', { 
-          userId: user.email,
+          "eliminated": [user.email],
         });
         socket.emit("game_state", { ...roomState, userAnswer: null });
-      } else if (roomState.status === 'playing' && roomState.currentQuestion) {
+      } else {
         const questionId = roomState.currentQuestion.id;
         const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
         const game_state = {
@@ -106,17 +107,18 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     }
 
     if (isDisplay) {
-
+      const remainingTime = gameManager.getCurrentTimeLeft();
+      socket.emit('countdown_update', { timeLeft: remainingTime });
     }
 
     // 断开连接处理
     socket.on('disconnect', () => {
       const user = socket.data.user;
-      if (user) {
+      if (user && !isAdmin && !isDisplay) {
         redis.del(RedisKeys.userOnline(user.email));
         redis.sRem(RedisKeys.roomSurvivors(roomId), user.email);
-        redis.sAdd(RedisKeys.roomEliminated(roomId), user.email);
       }
+      gameManager.emitPlayerCountUpdate();
     });
   });
 

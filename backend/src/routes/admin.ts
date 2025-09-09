@@ -1,6 +1,6 @@
 import express from 'express';
 import { GameManager} from '../lib/game.js';
-import { MinorityQuestion, GameStats, RoundStats} from '../types/index.js';
+import { MinorityQuestion } from '../types/index.js';
 
 const router = express.Router();
 
