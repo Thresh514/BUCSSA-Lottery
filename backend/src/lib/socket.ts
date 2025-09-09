@@ -57,7 +57,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     socket.join(roomId);
 
     const isAdmin = await redis.sIsMember(RedisKeys.admin(), user.email);
-    const isShow = await redis.sIsMember(RedisKeys.show(), user.email);
+    const isDisplay = await redis.sIsMember(RedisKeys.display(), user.email);
     const isInGame = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
     const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(roomId), user.email);
     const isWinner = await redis.get(RedisKeys.gameWinner(roomId)) === user.email;
@@ -74,7 +74,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     if (isAdmin) {
       const gameState = { ...roomState, "userAnswer": null };
       socket.emit("game_state", gameState);
-    } else if (isShow) {
+    } else if (isDisplay) {
       const gameState = { ...roomState, "userAnswer": null };
       socket.emit("game_state", gameState);
     } else {
@@ -105,11 +105,17 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       }
     }
 
+    if (isDisplay) {
+
+    }
+
     // 断开连接处理
     socket.on('disconnect', () => {
       const user = socket.data.user;
       if (user) {
         redis.del(RedisKeys.userOnline(user.email));
+        redis.sRem(RedisKeys.roomSurvivors(roomId), user.email);
+        redis.sAdd(RedisKeys.roomEliminated(roomId), user.email);
       }
     });
   });

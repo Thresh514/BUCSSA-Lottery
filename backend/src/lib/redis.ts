@@ -58,7 +58,7 @@ export const RedisKeys = {
   // 管理员列表
   admin: () => "nextauth:admin_emails",
 
-  show: () => "nextauth:display_emails",
+  display: () => "nextauth:display_emails",
   
   // NextAuth 用户认证相关
   // 弃用功能

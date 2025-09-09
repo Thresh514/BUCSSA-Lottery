@@ -47,6 +47,7 @@ export default function PlayPage() {
   // 添加调试信息
   useEffect(() => {
     if (status === "unauthenticated") {
+      console.log("Redirecting to login - unauthenticated");
       router.push("/login");
       return;
     }
@@ -63,6 +64,11 @@ export default function PlayPage() {
       router.push("/admin");
       return;
     }
+
+    if (session.user.isDisplay) {
+      router.push("/show");
+      return;
+    }
   }, [status, session]);
 
   useEffect(() => {
@@ -75,6 +81,10 @@ export default function PlayPage() {
     }
 
     if (session.user.isAdmin) {
+      return;
+    }
+
+    if (session.user.isDisplay) {
       return;
     }
 
@@ -111,6 +121,12 @@ export default function PlayPage() {
     socket.on("new_question", (data: GameState) => {
       setSelectedOption(data.userAnswer || "");
       setGameState(data);
+    });
+
+    socket.on("round_result", (data: GameState) => {
+      console.log("round_result received:", data);
+      setGameState(data);
+      setSelectedOption(data.userAnswer || "");
     });
 
     socket.on("eliminated", (data: any) => {
@@ -268,7 +284,38 @@ export default function PlayPage() {
         </div>
       </header>
 
+      {
+        /* Debug Info */
+        <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-sm text-black">
+          <p>
+            <strong>Debug Info:</strong>
+          </p>
+          <p>Game Status: {gameState.status}</p>
+          <p>
+            Has Current Question: {gameState.currentQuestion ? "Yes" : "No"}
+          </p>
+          <p>Is Eliminated: {isEliminated ? "Yes" : "No"}</p>
+          <p>Is Winner: {isWinner ? "Yes" : "No"}</p>
+          <p>Is Tie: {isTie ? "Yes" : "No"}</p>
+          <p>Connected: {connected ? "Yes" : "No"}</p>
+          <p>Round: {gameState.round}</p>
+        </div>
+      }
+
+      {/* Game Status Cards */}
       <main className="max-w-4xl mx-auto p-4 space-y-6">
+        {gameState.status === "waiting" && !isEliminated && (
+          <div className="bg-white/80 border border-gray-200/50 rounded-2xl p-6 text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-8 h-8 text-blue-600" />
+            </div>
+            <h2 className="text-lg font-bold text-blue-900 mb-2">等待下一题</h2>
+            <p className="text-blue-700 text-sm">
+              请耐心等待管理员发布下一题...
+            </p>
+          </div>
+        )}
+
         {/* User Status */}
         {isEliminated && (
           <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-6 text-center animate-slide-up">
@@ -306,21 +353,10 @@ export default function PlayPage() {
           </div>
         )}
 
-        {/* Game Status Cards */}
-        {gameState.status === "waiting" && !isEliminated && (
-          <div className="bg-white/80 border border-gray-200/50 rounded-2xl p-6 text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-8 h-8 text-blue-600" />
-            </div>
-            <h2 className="text-lg font-bold text-blue-900 mb-2">等待下一题</h2>
-            <p className="text-blue-700 text-sm">
-              请耐心等待管理员发布下一题...
-            </p>
-          </div>
-        )}
-
         {/* Question Area */}
-        {gameState.currentQuestion && gameState.status === "playing" && !isEliminated && (
+        {gameState.currentQuestion &&
+          gameState.status === "playing" &&
+          !isEliminated && (
             <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-8 animate-slide-up">
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-primary text-black rounded-full text-sm font-medium mb-4">

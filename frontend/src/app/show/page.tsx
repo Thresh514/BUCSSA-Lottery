@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -15,35 +15,147 @@ import {
   WifiOff,
   LogOut,
 } from "lucide-react";
-import {
-  GameState,
-  hasWinner,
-  hasTie,
-} from "@/types";
+import { GameState, hasWinner, hasTie } from "@/types";
 import { formatTime } from "@/lib/utils";
 
 export default function ShowPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [gameState, setGameState] = useState<GameState>(
-    {
-      status: "waiting",
-      currentQuestion: null,
-      round: 0,
-      timeLeft: 0,
-      survivorsCount: 0,
-      eliminatedCount: 0,
-      userAnswer: null,
-      roundResult: null,
-    } 
-  );
+  const [gameState, setGameState] = useState<GameState>({
+    status: "waiting",
+    currentQuestion: null,
+    round: 0,
+    timeLeft: 0,
+    survivorsCount: 0,
+    eliminatedCount: 0,
+    userAnswer: null,
+    roundResult: null,
+  });
   const [socket, setSocket] = useState<Socket | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
   const [tie, setTie] = useState<string[] | null>(null);
-  
+
+  const socketRef = useRef<Socket | null>(null);
+
   // 前端倒计时状态
   const [frontendTimeLeft, setFrontendTimeLeft] = useState<number>(0);
   const [countdownActive, setCountdownActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+
+    if (status === "loading") {
+      return; // 等待认证状态
+    }
+
+    if (!session?.user?.email) {
+      return;
+    }
+
+    if (session.user.isAdmin) {
+      router.push("/admin");
+      return;
+    }
+
+    if (!session.user.isDisplay && !session.user.isAdmin) {
+      router.push("/play");
+      return;
+    }
+  }, [status, session]);
+
+  // // 检查用户权限
+  // useEffect(() => {
+  //   if (status === "authenticated" && session?.user) {
+  //     if (!session.user.isDisplay) {
+  //       console.log("🚫 User is not authorized for display mode");
+  //       router.push("/play");
+  //       return;
+  //     }
+  //   } else if (status === "unauthenticated") {
+  //     router.push("/login");
+  //     return;
+  //   }
+  // }, [session, status, router]);
+
+  // Socket.IO 连接
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      return;
+    }
+
+    if (!session?.user?.email) {
+      return;
+    }
+
+    if (session.user.isAdmin) {
+      return;
+    }
+
+    if (!session.user.isDisplay) {
+      return;
+    }
+
+    const socket = io(process.env.NEXT_PUBLIC_API_BASE!, {
+      auth: {
+        email: session.user.email,
+      },
+    });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("📺 Display Socket.IO connected");
+      setSocket(socket);
+    });
+
+    socket.on("game_start", (data: GameState) => {
+      console.log("📺 Received game_start:", data);
+      setGameState(data);
+    });
+
+    socket.on("game_reset", (data: GameState) => {
+      setGameState(data);
+    });
+
+    socket.on("game_state", (data: GameState) => {
+      console.log("📺 Received game_state:", data);
+      setGameState(data);
+    });
+
+    socket.on("new_question", (data: GameState) => {
+      console.log("📺 Received new_question:", data);
+      setGameState(data);
+      // 重置倒计时
+      setCountdownActive(false);
+    });
+
+    socket.on("tie", (data: hasTie) => {
+      console.log("📺 Received game_tie:", data.finalists);
+      setTie(data.finalists);
+      // 停止倒计时
+      setCountdownActive(false);
+      setFrontendTimeLeft(0);
+    });
+
+    socket.on("winner", (data: hasWinner) => {
+      console.log("📺 Received winner:", data.winnerEmail);
+      setWinner(data.winnerEmail);
+      // 停止倒计时
+      setCountdownActive(false);
+      setFrontendTimeLeft(0);
+    });
+
+    socket.on("disconnect", (reason: string) => {
+      console.log("📺 Display Socket.IO disconnected:", reason);
+      setSocket(null);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [status, session]);
 
   // 前端倒计时逻辑
   useEffect(() => {
@@ -68,14 +180,6 @@ export default function ShowPage() {
     };
   }, [countdownActive, frontendTimeLeft]);
 
-  // 当收到新的游戏状态时，启动前端倒计时
-  //useEffect(() => {
-    //if (gameState.timeLeft !== null) {
-    //setFrontendTimeLeft(gameState.timeLeft);
-    //setCountdownActive(true);
-    //}
-  //}, [gameState.timeLeft]);
-
   // 当收到新题目时，启动题目倒计时
   useEffect(() => {
     if (gameState.timeLeft !== null) {
@@ -83,112 +187,6 @@ export default function ShowPage() {
       setCountdownActive(true);
     }
   }, [gameState.timeLeft]);
-
-  // 检查用户权限
-  useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      if (!session.user.isDisplay) {
-        console.log("🚫 User is not authorized for display mode");
-        router.push("/play");
-        return;
-      }
-    } else if (status === "unauthenticated") {
-      router.push("/login");
-      return;
-    }
-  }, [session, status, router]);
-
-  // Socket.IO 连接
-  useEffect(() => {
-    if (!session?.user?.isDisplay || !session.user.email) return;
-
-    const connectSocket = () => {
-      try {
-        const serverUrl =
-          process.env.NEXT_PUBLIC_WS_URL || "http://localhost:4000";
-        console.log("📺 Connecting to Socket.IO server:", serverUrl);
-
-        const newSocket = io(serverUrl, {
-          auth: {
-            email: session.user.email,
-          },
-          transports: ["websocket", "polling"],
-          forceNew: true,
-        });
-
-        newSocket.on("connect", () => {
-          console.log("📺 Display Socket.IO connected");
-          setSocket(newSocket);
-        });
-
-        newSocket.on("game_start", (data: GameState) => {
-          console.log("📺 Received game_start:", data);
-          setGameState(data);
-        });
-
-        newSocket.on("game_reset", (data: GameState) => {
-          setGameState(data);
-        });
-
-        newSocket.on("game_state", (data: GameState) => {
-          console.log("📺 Received game_state:", data);
-          setGameState(data);
-        });
-
-        newSocket.on("new_question", (data: GameState) => {
-          console.log("📺 Received new_question:", data);
-          setGameState(data);
-          // 重置倒计时
-          setCountdownActive(false);
-        });
-
-        newSocket.on("tie", (data: hasTie) => {
-          console.log("📺 Received game_tie:", data.finalists);
-          setTie(data.finalists);
-          // 停止倒计时
-          setCountdownActive(false);
-          setFrontendTimeLeft(0);
-        });
-
-        newSocket.on("winner", (data: hasWinner) => {
-          console.log("📺 Received winner:", data.winnerEmail);
-          setWinner(data.winnerEmail);
-          // 停止倒计时
-          setCountdownActive(false);
-          setFrontendTimeLeft(0);
-        });
-
-        newSocket.on("disconnect", (reason: string) => {
-          console.log("📺 Display Socket.IO disconnected:", reason);
-          setSocket(null);
-        });
-
-        newSocket.on("connect_error", (error: any) => {
-          console.error("📺 Display Socket.IO connection error:", error);
-
-          // 自动重连
-          setTimeout(() => {
-            console.log("📺 Attempting to reconnect...");
-            connectSocket();
-          }, 3000);
-        });
-
-        return newSocket;
-      } catch (error) {
-        console.error("📺 Error creating Socket.IO connection:", error);
-        setTimeout(connectSocket, 3000);
-        return null;
-      }
-    };
-
-    const newSocket = connectSocket();
-
-    return () => {
-      if (newSocket) {
-        newSocket.disconnect();
-      }
-    };
-  }, [session?.user?.isDisplay, session?.user?.email]);
 
   // 退出登录处理函数
   const handleLogout = async () => {
@@ -224,7 +222,9 @@ export default function ShowPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center justify-between w-full px-4">
-              <h1 className="text-2xl font-semibold tracking-wide">BUCSSA 国庆晚会抽奖</h1>
+              <h1 className="text-2xl font-semibold tracking-wide">
+                BUCSSA 国庆晚会抽奖
+              </h1>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center">
                   {socket ? (
@@ -303,7 +303,8 @@ export default function ShowPage() {
                 </div>
                 <div>
                   <p className="text-3xl font-bold text-white">
-                    {(gameState.survivorsCount || 0) + (gameState.eliminatedCount || 0)}
+                    {(gameState.survivorsCount || 0) +
+                      (gameState.eliminatedCount || 0)}
                   </p>
                   <p className="text-gray-400 text-sm">总参与人数</p>
                 </div>
@@ -402,7 +403,8 @@ export default function ShowPage() {
             <p className="text-xl text-gray-300 mb-4">等待管理员开始游戏...</p>
             {gameState.survivorsCount + gameState.eliminatedCount > 0 && (
               <p className="text-lg text-blue-300">
-                当前已有 {gameState.survivorsCount + gameState.eliminatedCount}{" "}名玩家加入
+                当前已有 {gameState.survivorsCount + gameState.eliminatedCount}{" "}
+                名玩家加入
               </p>
             )}
           </motion.div>
@@ -421,7 +423,7 @@ export default function ShowPage() {
             <h2 className="text-5xl font-bold mb-8 text-yellow-400">
               🎉 游戏结束
             </h2>
-            
+
             {winner ? (
               <div className="space-y-6">
                 <div className="text-3xl text-white mb-4">恭喜获胜者！</div>
@@ -432,28 +434,28 @@ export default function ShowPage() {
               </div>
             ) : tie ? (
               <div className="space-y-6">
-              <div className="text-3xl text-white mb-6">请两位选手上台PK！</div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-6 rounded-2xl">
-                  <div className="text-2xl font-bold mb-2">选手 1</div>
-                  <div className="text-xl">{tie[0]}</div>
+                <div className="text-3xl text-white mb-6">
+                  请两位选手上台PK！
                 </div>
-                
-                <div className="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-6 rounded-2xl">
-                  <div className="text-2xl font-bold mb-2">选手 2</div>
-                  <div className="text-xl">{tie[1]}</div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-6 rounded-2xl">
+                    <div className="text-2xl font-bold mb-2">选手 1</div>
+                    <div className="text-xl">{tie[0]}</div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-8 py-6 rounded-2xl">
+                    <div className="text-2xl font-bold mb-2">选手 2</div>
+                    <div className="text-xl">{tie[1]}</div>
+                  </div>
+                </div>
+
+                <div className="text-2xl text-yellow-300 mt-8">
+                  🎯 准备进行最终对决！
                 </div>
               </div>
-              
-              <div className="text-2xl text-yellow-300 mt-8">
-                🎯 准备进行最终对决！
-              </div>
-            </div>
             ) : (
-              <div className="text-3xl text-white">
-                没有获胜者
-              </div>
+              <div className="text-3xl text-white">没有获胜者</div>
             )}
           </motion.div>
         )}
@@ -483,7 +485,8 @@ export default function ShowPage() {
             className="bg-white/10 backdrop-blur-lg rounded-3xl p-16 text-center"
           >
             <div className="text-3xl font-bold text-yellow-300 mb-4">
-              本轮少数派答案：{gameState.roundResult.minorityAnswer === "A" ? "A" : "B"}
+              本轮少数派答案：
+              {gameState.roundResult.minorityAnswer === "A" ? "A" : "B"}
             </div>
             <div className="flex flex-col md:flex-row justify-center gap-8 mb-4">
               <div className="bg-blue-500/80 rounded-xl px-8 py-4 text-white text-xl font-semibold">
@@ -494,10 +497,16 @@ export default function ShowPage() {
               </div>
             </div>
             <div className="text-lg text-white mb-2">
-              本轮存活人数：<span className="font-bold text-green-300">{gameState.roundResult.survivorsCount}</span>
+              本轮存活人数：
+              <span className="font-bold text-green-300">
+                {gameState.roundResult.survivorsCount}
+              </span>
             </div>
             <div className="text-lg text-white">
-              本轮淘汰人数：<span className="font-bold text-red-300">{gameState.roundResult.eliminatedCount}</span>
+              本轮淘汰人数：
+              <span className="font-bold text-red-300">
+                {gameState.roundResult.eliminatedCount}
+              </span>
             </div>
           </motion.div>
         )}

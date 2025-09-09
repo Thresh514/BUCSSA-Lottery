@@ -95,21 +95,19 @@ export default function AdminPage() {
   const [connected, setConnected] = useState(false);
   const [tie, setTie] = useState<string[] | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
-  
+
   const [sentQuestions, setSentQuestions] = useState<Set<number>>(new Set());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [gameState, setGameState] = useState<GameState>(
-    {
-      status: "waiting",
-      currentQuestion: null,
-      round: 0,
-      timeLeft: 0,
-      survivorsCount: 0,
-      eliminatedCount: 0,
-      userAnswer: null,
-      roundResult: null,
-    }
-  );
+  const [gameState, setGameState] = useState<GameState>({
+    status: "waiting",
+    currentQuestion: null,
+    round: 0,
+    timeLeft: 0,
+    survivorsCount: 0,
+    eliminatedCount: 0,
+    userAnswer: null,
+    roundResult: null,
+  });
   const socketRef = useRef<Socket | null>(null);
 
   // 认证检查
@@ -144,6 +142,9 @@ export default function AdminPage() {
       return;
     }
 
+    if (session.user.isDisplay) {
+      return;
+    }
 
     const socket = io(process.env.NEXT_PUBLIC_API_BASE!, {
       auth: {
@@ -314,26 +315,31 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-gradient-primary rounded-xl flex items-center justify-center">
-                <Image src="/bucssalogo.png" alt="logo" width={48} height={48} />
+                <Image
+                  src="/bucssalogo.png"
+                  alt="logo"
+                  width={48}
+                  height={48}
+                />
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-white">
                   BUCSSA 国庆晚会抽奖 - 管理控制台
                 </h1>
-                  <div className="flex items-center gap-1">
-                    {connected ? (
-                      <Wifi className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <WifiOff className="w-4 h-4 text-red-400" />
-                    )}
-                    <span
-                      className={`text-xs font-medium ${
-                        connected ? "text-green-400" : "text-red-400"
-                      }`}
-                    >
-                      {connected ? "已连接" : "连接中..."}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1">
+                  {connected ? (
+                    <Wifi className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 text-red-400" />
+                  )}
+                  <span
+                    className={`text-xs font-medium ${
+                      connected ? "text-green-400" : "text-red-400"
+                    }`}
+                  >
+                    {connected ? "已连接" : "连接中..."}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -407,7 +413,9 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-xl font-bold text-white">
-                  {gameState.survivorsCount || 0 + gameState.eliminatedCount || 0}
+                  {gameState.survivorsCount ||
+                    0 + gameState.eliminatedCount ||
+                    0}
                 </p>
                 <p className="text-gray-400 text-sm">总参与人数</p>
               </div>
@@ -415,37 +423,39 @@ export default function AdminPage() {
           </div>
 
           <div className="glass rounded-xl p-4 hover-lift">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
-                  <Crown className="w-4 h-4 text-green-400" />
-                </div>
-                <div>
-                  {winner && (
-                  <p className="text-md font-bold text-white">
-                    {winner}
-                  </p>
-                  )}
-                  <p className="text-white text-xl font-bold">暂无获胜玩家</p>
-                  <p className="text-gray-400 text-sm">获胜者</p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <Crown className="w-4 h-4 text-green-400" />
               </div>
+              <div>
+                {winner ? (
+                  <p className="text-md font-bold text-white">{winner}</p>
+                ) : (
+                  <p className="text-white text-xl font-bold">暂无获胜玩家</p>
+                )}
+
+                <p className="text-gray-400 text-sm">获胜者</p>
+              </div>
+            </div>
           </div>
-          
+
           <div className="glass rounded-xl p-4 hover-lift">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                  <Trophy className="w-4 h-4 text-yellow-400" />
-                </div>
-                <div>
-                  {tie && (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <Trophy className="w-4 h-4 text-yellow-400" />
+              </div>
+              <div>
+                {tie ? (
                   <p className="text-md font-bold text-white">
                     {tie.join(", ")}
                   </p>
-                  )}
+                ) : (
                   <p className="text-white text-xl font-bold">暂无平手玩家</p>
-                  <p className="text-gray-400 text-sm">决赛圈</p>
-                </div>
+                )}
+
+                <p className="text-gray-400 text-sm">决赛圈</p>
               </div>
+            </div>
           </div>
         </div>
 
@@ -454,7 +464,8 @@ export default function AdminPage() {
           <div className="text-center mb-5">
             <h3 className="text-xl font-bold text-white mb-2">题目列表</h3>
             <p className="text-gray-400 text-md">
-              共 {PRESET_QUESTIONS.length} 道题目，已发布 {sentQuestions.size}{" "}题
+              共 {PRESET_QUESTIONS.length} 道题目，已发布 {sentQuestions.size}{" "}
+              题
             </p>
           </div>
 
@@ -605,8 +616,6 @@ export default function AdminPage() {
             )}
           </div>
         )}
-
-        
       </main>
 
       {/* Logout Confirmation Alert Box */}

@@ -14,10 +14,17 @@ export interface MinorityQuestion {
 export class GameManager {
   private roomId: string;
   private io: any; // Socket.IO instance
+  private countdownInterval: NodeJS.Timeout | null = null;
+  private currentTimeLeft: number = 0;
 
   constructor(roomId: string = process.env.DEFAULT_ROOM_ID!) {
     this.roomId = roomId;
     this.io = getSocketIO();
+  }
+
+  // 获取当前倒计时值
+  getCurrentTimeLeft(): number {
+    return this.currentTimeLeft;
   }
 
   // 获取游戏状态
@@ -101,12 +108,29 @@ export class GameManager {
   // 倒计时处理
   private startCountdown(): void {
     let timeLeft = 30;
+    this.currentTimeLeft = timeLeft;
     
-    const countdown = setInterval(async () => {
+    // Clear any existing countdown
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+    
+    this.countdownInterval = setInterval(async () => {
       timeLeft--;
+      this.currentTimeLeft = timeLeft;
+      
+      // Update Redis with current time left
+      await redis.hSet(RedisKeys.gameState(this.roomId), 'timeLeft', timeLeft.toString());
+      
+      // Emit countdown update to display users
+      if (this.io) {
+        this.io.to(this.roomId).emit('countdown_update', { timeLeft });
+      }
       
       if (timeLeft <= 0) {
-        clearInterval(countdown);
+        clearInterval(this.countdownInterval!);
+        this.countdownInterval = null;
+        this.currentTimeLeft = 0;
         await this.endRound();
       }
     }, 1000);
@@ -206,9 +230,9 @@ export class GameManager {
 
     // 广播结果
     if (this.io) {
-      this.io.to(this.roomId).emit('round_result', {
+      this.io.to(this.roomId).emit('round_result', 
         gameState
-      });
+      );
     }
   }
 
@@ -240,6 +264,13 @@ export class GameManager {
 
   // 重置游戏
   async resetGame(): Promise<void> {
+    // Clear any running countdown
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    this.currentTimeLeft = 0;
+    
     await redis.del(RedisKeys.currentQuestion(this.roomId));
     await redis.del(RedisKeys.roomSurvivors(this.roomId));
     await redis.del(RedisKeys.roomEliminated(this.roomId));
