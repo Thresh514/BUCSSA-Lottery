@@ -270,7 +270,9 @@ export class GameManager {
       await redis.set(RedisKeys.gameWinner(this.roomId), winner);
     }
     if (tier) {
-      await redis.set(RedisKeys.gameTie(this.roomId), tier.join(','));
+      for (const finalist of tier) {
+        await redis.sAdd(RedisKeys.gameTie(this.roomId), finalist);
+      }
     }
 
     const redisEliminatedUsers = await redis.sMembers(RedisKeys.roomEliminated(this.roomId)) as string[];
