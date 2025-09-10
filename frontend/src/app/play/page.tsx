@@ -248,7 +248,7 @@ export default function PlayPage() {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">
-                    少数派游戏
+                    BUCSSA 国庆晚会抽奖
                   </h1>
                   <div className="flex items-center gap-2">
                     {connected ? (
