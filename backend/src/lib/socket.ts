@@ -1,7 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { redis, RedisKeys } from './redis.js';
-import { GameManager } from './game.js';
+import { getGameManager } from './game.js';
 import { GameState } from '../types/index.js';
 
 
@@ -49,7 +49,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
   // 连接事件处理
   io.on('connection', async (socket) => {
-    const gameManager = new GameManager();
+    const gameManager = getGameManager();
     const user = socket.data.user;
 
     // 用户加入游戏房间
@@ -58,13 +58,22 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
     const isAdmin = await redis.sIsMember(RedisKeys.admin(), user.email);
     const isDisplay = await redis.sIsMember(RedisKeys.display(), user.email);
-    const isInGame = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
+    const isSurviving = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
     const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(roomId), user.email);
     const isWinner = await redis.get(RedisKeys.gameWinner(roomId)) === user.email;
     const tieSet = await redis.get(RedisKeys.gameTie(roomId))
     const isTie = tieSet?.includes(user.email);
+    const gameStarted = await redis.get(RedisKeys.currentRound(roomId)) !== '0' || null;
 
-    if (!isInGame && !isEliminated && !isAdmin && !isDisplay) {
+    if (!isAdmin && !isDisplay && gameStarted && !isSurviving && !isEliminated) {
+      socket.emit('redirect', { 
+        message: '游戏已开始，请等待下一轮游戏' 
+      });
+      socket.disconnect();
+      return;
+    }
+
+    if (!isAdmin && !isDisplay && !isSurviving && !isEliminated) {
       // 新用户加入游戏
       await gameManager.addPlayer(user.email);
       gameManager.emitPlayerCountUpdate();

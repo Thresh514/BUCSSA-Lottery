@@ -11,6 +11,15 @@ export interface MinorityQuestion {
   startTime: string;
 }
 
+let gameManagerInstance: GameManager | null = null;
+
+export function getGameManager(roomId?: string): GameManager {
+  if (!gameManagerInstance) {
+    gameManagerInstance = new GameManager(roomId || process.env.DEFAULT_ROOM_ID!);
+  }
+  return gameManagerInstance;
+}
+
 export class GameManager {
   private roomId: string;
   private io: any; // Socket.IO instance
@@ -20,6 +29,8 @@ export class GameManager {
   constructor(roomId: string = process.env.DEFAULT_ROOM_ID!) {
     this.roomId = roomId;
     this.io = getSocketIO();
+    this.countdownInterval = null;
+    this.currentTimeLeft = 0;
   }
 
   // 获取当前倒计时值
@@ -58,8 +69,8 @@ export class GameManager {
   async emitPlayerCountUpdate(): Promise<void> {
     if (this.io) {
       const roomState = await this.getRoomState();
-      const gameState = { ...roomState, "userAnswer": null };
-      this.io.to(this.roomId).emit('player_count_update', roomState);
+      const gameState = { ...roomState, "userAnswer": null, "roundResult": null };
+      this.io.to(this.roomId).emit('player_count_update', gameState);
     }
   }
 
@@ -100,9 +111,9 @@ export class GameManager {
         startTime: question.startTime,
       };
       roomState = { ...roomState, "currentQuestion": questionData };
-      const gameState = { ...roomState, "userAnswer": null };
+      const gameState = { ...roomState, "userAnswer": null, "roundResult": null };
       
-      this.io.to(this.roomId).emit('new_question', { gameState });
+      this.io.to(this.roomId).emit('new_question', gameState );
     } else {
       console.log(`❌ Socket.IO instance is null, cannot emit new_question`);
     }
@@ -265,10 +276,10 @@ export class GameManager {
     if (this.io) {
       if (winner) {
         this.io.to(this.roomId).emit('winner', { winnerEmail: winner });
-        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null });
+        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
       }
       if (tier) {
-        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null });
+        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
         this.io.to(this.roomId).emit('tie', { finalists: tier });
       }
     }
@@ -308,7 +319,7 @@ export class GameManager {
   // 初始化游戏
   async initializeGame(): Promise<void> {
     const roomState = await this.getRoomState();
-    const gameState = { ...roomState, "userAnswer": null };
+    const gameState = { ...roomState, "userAnswer": null, "roundResult": null };
 
     if (this.io) {
       this.io.to(this.roomId).emit('game_start', gameState);
@@ -333,28 +344,28 @@ export class GameManager {
   }
 
   // 获取当前轮次统计
-  async getRoundStats() {
-    const currentQuestion = await redis.hGetAll(RedisKeys.currentQuestion(this.roomId)) as any;
-    if (!currentQuestion || !currentQuestion.id) return null;
+  // async getRoundStats() {
+  //   const currentQuestion = await redis.hGetAll(RedisKeys.currentQuestion(this.roomId)) as any;
+  //   if (!currentQuestion || !currentQuestion.id) return null;
 
-    const survivors = await redis.sMembers(RedisKeys.roomSurvivors(this.roomId)) as string[];
-    if (!survivors) return null;
+  //   const survivors = await redis.sMembers(RedisKeys.roomSurvivors(this.roomId)) as string[];
+  //   if (!survivors) return null;
     
-    const answers: { [key: string]: number } = { A: 0, B: 0 };
+  //   const answers: { [key: string]: number } = { A: 0, B: 0 };
 
-    for (const userEmail of survivors) {
-      const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
-      if (answer && (answer === 'A' || answer === 'B')) {
-        answers[answer]++;
-      }
-    }
+  //   for (const userEmail of survivors) {
+  //     const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
+  //     if (answer && (answer === 'A' || answer === 'B')) {
+  //       answers[answer]++;
+  //     }
+  //   }
 
-    return {
-      question: currentQuestion,
-      answers,
-      totalAnswers: answers.A + answers.B,
-      survivorsCount: survivors.length,
-    };
-  }
+  //   return {
+  //     question: currentQuestion,
+  //     answers,
+  //     totalAnswers: answers.A + answers.B,
+  //     survivorsCount: survivors.length,
+  //   };
+  // }
 
-} 
+}

@@ -104,6 +104,11 @@ export default function PlayPage() {
       setConnected(false);
     });
 
+    socket.on("redirect", (data: { url: string; message: string }) => {
+      console.log("Redirecting:", data);
+      handleLogout();
+    });
+
     socket.on("game_state", (data: GameState) => {
       console.log("game_state received:", data);
       setGameState(data);

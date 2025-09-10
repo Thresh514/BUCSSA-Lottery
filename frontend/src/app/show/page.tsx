@@ -66,20 +66,6 @@ export default function ShowPage() {
     }
   }, [status, session]);
 
-  // // 检查用户权限
-  // useEffect(() => {
-  //   if (status === "authenticated" && session?.user) {
-  //     if (!session.user.isDisplay) {
-  //       console.log("🚫 User is not authorized for display mode");
-  //       router.push("/play");
-  //       return;
-  //     }
-  //   } else if (status === "unauthenticated") {
-  //     router.push("/login");
-  //     return;
-  //   }
-  // }, [session, status, router]);
-
   // Socket.IO 连接
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -106,7 +92,6 @@ export default function ShowPage() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("📺 Display Socket.IO connected");
       setSocket(socket);
     });
 
@@ -117,6 +102,11 @@ export default function ShowPage() {
         survivorsCount: data.survivorsCount,
         eliminatedCount: data.eliminatedCount,
       }));
+    });
+
+    socket.on("countdown_update", (data: { timeLeft: number }) => {
+      setFrontendTimeLeft(data.timeLeft);
+      setCountdownActive(true);
     });
 
     socket.on("game_start", (data: GameState) => {
@@ -137,13 +127,20 @@ export default function ShowPage() {
       console.log("📺 Received new_question:", data);
       setGameState(data);
       // 重置倒计时
+      setFrontendTimeLeft(30);
+      setCountdownActive(true);
+    });
+
+    socket.on("round_result", (data: GameState) => {
+      setGameState(data);
+      // 停止倒计时
       setCountdownActive(false);
+      setFrontendTimeLeft(0);
     });
 
     socket.on("tie", (data: hasTie) => {
       console.log("📺 Received game_tie:", data.finalists);
       setTie(data.finalists);
-      // 停止倒计时
       setCountdownActive(false);
       setFrontendTimeLeft(0);
     });
@@ -151,14 +148,8 @@ export default function ShowPage() {
     socket.on("winner", (data: hasWinner) => {
       console.log("📺 Received winner:", data.winnerEmail);
       setWinner(data.winnerEmail);
-      // 停止倒计时
       setCountdownActive(false);
       setFrontendTimeLeft(0);
-    });
-
-    socket.on("disconnect", (reason: string) => {
-      console.log("📺 Display Socket.IO disconnected:", reason);
-      setSocket(null);
     });
 
     return () => {
@@ -188,14 +179,6 @@ export default function ShowPage() {
       }
     };
   }, [countdownActive, frontendTimeLeft]);
-
-  // 当收到新题目时，启动题目倒计时
-  useEffect(() => {
-    if (gameState.timeLeft !== null) {
-      setFrontendTimeLeft(gameState.timeLeft);
-      setCountdownActive(true);
-    }
-  }, [gameState.timeLeft]);
 
   // 退出登录处理函数
   const handleLogout = async () => {
@@ -256,6 +239,13 @@ export default function ShowPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* debug */}
+        {gameState && (
+          <pre className="whitespace-pre-wrap">
+            {JSON.stringify(gameState, null, 2)}
+          </pre>
+        )}
+
         {/* 游戏统计面板 */}
         {gameState && (
           <motion.div
