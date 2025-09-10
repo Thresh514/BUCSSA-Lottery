@@ -26,14 +26,13 @@ import { GameState } from "@/types";
 export default function PlayPage() {
   const { data: session, status } = useSession();
   const [gameState, setGameState] = useState<GameState>({
+    round: 0,
     status: "waiting",
     currentQuestion: null,
-    round: 0,
-    timeLeft: 0,
+    answers: { A: 0, B: 0 },
     survivorsCount: 0,
     eliminatedCount: 0,
     userAnswer: null,
-    roundResult: null,
   });
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
   const [isEliminated, setIsEliminated] = useState(false);
@@ -383,7 +382,7 @@ export default function PlayPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <button
                   onClick={() => handleSubmitAnswer("A")}
-                  disabled={!!selectedOption || gameState.timeLeft <= 0}
+                  disabled={!!selectedOption}
                   className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
                     selectedOption === "A"
                       ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"
@@ -413,7 +412,7 @@ export default function PlayPage() {
 
                 <button
                   onClick={() => handleSubmitAnswer("B")}
-                  disabled={!!selectedOption || gameState.timeLeft <= 0}
+                  disabled={!!selectedOption}
                   className={`group relative p-6 rounded-2xl border-2 transition-all duration-200 hover-lift disabled:transform-none disabled:opacity-50 ${
                     selectedOption === "B"
                       ? "border-purple-500 bg-gradient-to-r from-purple-50 to-blue-50"

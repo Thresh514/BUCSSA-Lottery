@@ -25,13 +25,12 @@ export interface MinorityQuestion {
 
 export interface GameState {
   status: "waiting" | "playing" | "ended";
-  currentQuestion: MinorityQuestion | null;
   round: number;
-  timeLeft: number;
+  currentQuestion: MinorityQuestion | null;
+  answers: { A: number; B: number } | null;
   survivorsCount: number;
   eliminatedCount: number;
   userAnswer: 'A' | 'B' | null;
-  roundResult: RoundResult | null;
 }
 
 // 轮次结果消息
@@ -39,8 +38,6 @@ export interface RoundResult {
   minorityAnswer: 'A' | 'B';
   majorityAnswer: 'A' | 'B';
   answers: { A: number; B: number };
-  survivorsCount: number;
-  eliminatedCount: number;
 }
 
 export interface hasWinner {

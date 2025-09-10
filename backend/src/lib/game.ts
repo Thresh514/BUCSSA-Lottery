@@ -33,6 +33,10 @@ export class GameManager {
     this.currentTimeLeft = 0;
   }
 
+  async setGameStartState(started: boolean): Promise<void> {
+    await redis.set(RedisKeys.gameStarted(this.roomId), started ? '1' : '0');
+  }
+
   // 获取当前倒计时值
   getCurrentTimeLeft(): number {
     return this.currentTimeLeft;
@@ -44,22 +48,25 @@ export class GameManager {
     
     const [
       gameState,
+      currentRound,
       currentQuestion,
+      answers,
       survivorsCount,
       eliminatedCount,
-      currentRound,
     ] = await Promise.all([
       redis.hGetAll(RedisKeys.gameState(roomId)),
+      redis.get(RedisKeys.currentRound(roomId)),
       redis.hGetAll(RedisKeys.currentQuestion(roomId)),
+      redis.hGetAll(RedisKeys.gameAnswers(roomId)),
       redis.sCard(RedisKeys.roomSurvivors(roomId)),
       redis.sCard(RedisKeys.roomEliminated(roomId)),
-      redis.get(RedisKeys.currentRound(roomId)),
     ]);
 
     return {
       status: gameState.status || 'waiting',
       currentQuestion: currentQuestion || null,
       round: parseInt(currentRound || '0'),
+      answers: answers && (answers.A || answers.B) ? { A: parseInt(answers.A || '0'), B: parseInt(answers.B || '0') } : null,
       timeLeft: parseInt(gameState.timeLeft || '0'),
       survivorsCount,
       eliminatedCount,
@@ -88,6 +95,8 @@ export class GameManager {
 
     // 更新当前轮次
     await redis.set(RedisKeys.currentRound(this.roomId), newRound.toString());
+    await redis.hSet(RedisKeys.gameAnswers(this.roomId), 'A', '0');
+    await redis.hSet(RedisKeys.gameAnswers(this.roomId), 'B', '0');
 
     // 保存当前题目
     await redis.hSet(RedisKeys.currentQuestion(this.roomId), 'id', question.id);
@@ -114,12 +123,11 @@ export class GameManager {
       const gameState = { ...roomState, "userAnswer": null, "roundResult": null };
       
       this.io.to(this.roomId).emit('new_question', gameState );
+      // 启动倒计时
+      this.startCountdown();
     } else {
       console.log(`❌ Socket.IO instance is null, cannot emit new_question`);
     }
-
-    // 启动倒计时
-    this.startCountdown();
   }
 
   // 倒计时处理
@@ -162,6 +170,7 @@ export class GameManager {
 
     // 记录用户答案
     await redis.set(RedisKeys.userAnswer(userEmail, currentQuestion.toString()), answer);
+    await redis.hIncrBy(RedisKeys.gameAnswers(this.roomId), answer, 1);
   }
 
   // 结束当前轮次并处理少数派晋级
@@ -172,15 +181,18 @@ export class GameManager {
     const survivors = await redis.sMembers(RedisKeys.roomSurvivors(this.roomId));
     if (!survivors) return;
 
-    const answers: { [key: string]: number } = { A: 0, B: 0 };
+    const answersFromRedis = await redis.hGetAll(RedisKeys.gameAnswers(this.roomId)) as { [key: string]: string };
+    const answersCount = { 
+      A: parseInt(answersFromRedis.A || '0'), 
+      B: parseInt(answersFromRedis.B || '0') 
+    };
+
     let eliminatedUsers: string[] = [];
 
-    // 统计答案
+    // 检查未答题用户并淘汰
     for (const userEmail of survivors) {
       const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
-      if (answer && (answer === 'A' || answer === 'B')) {
-        answers[answer]++;
-      } else {
+      if (!answer || (answer !== 'A' && answer !== 'B')) {
         // 未答题视为弃权，淘汰
         eliminatedUsers.push(userEmail);
         await redis.sRem(RedisKeys.roomSurvivors(this.roomId), userEmail);
@@ -193,12 +205,12 @@ export class GameManager {
     // 找出少数派
     let majorityAnswer: string | null;
     let minorityAnswer: string | null;
-    if (answers.A === answers.B || answers.A === 0 || answers.B === 0) { // 无人淘汰情况
+    if (answersCount.A === answersCount.B || answersCount.A === 0 || answersCount.B === 0) { // 无人淘汰情况
       majorityAnswer = null;
       minorityAnswer = null;
     } else {
-      minorityAnswer = answers.A <= answers.B ? 'A' : 'B';
-      majorityAnswer = answers.A <= answers.B ? 'B' : 'A';
+      minorityAnswer = answersCount.A <= answersCount.B ? 'A' : 'B';
+      majorityAnswer = answersCount.A <= answersCount.B ? 'B' : 'A';
     }
 
     // 淘汰多数派，保留少数派
@@ -239,14 +251,7 @@ export class GameManager {
     }
 
     const roomState = await this.getRoomState();
-    const roundResult = {
-      minorityAnswer,
-      majorityAnswer,
-      answers,
-      eliminatedCount: eliminatedUsers.length,
-      survivorsCount: remainingSurvivors.length,
-    }
-    const gameState = { ...roomState, "userAnswer": null, "roundResult": roundResult };
+    const gameState = { ...roomState, "userAnswer": null};
 
     // 广播结果
     if (this.io) {
@@ -300,6 +305,7 @@ export class GameManager {
     await redis.del(RedisKeys.roomEliminated(this.roomId));
     await redis.del(RedisKeys.gameWinner(this.roomId));
     await redis.del(RedisKeys.gameTie(this.roomId));
+    await redis.del(RedisKeys.gameAnswers(this.roomId));
 
     const answerKeys = await redis.keys(RedisKeys.userAnswer('*', '*'));
     if (answerKeys.length > 0) {

@@ -22,14 +22,13 @@ export default function ShowPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [gameState, setGameState] = useState<GameState>({
+    round: 0,
     status: "waiting",
     currentQuestion: null,
-    round: 0,
-    timeLeft: 0,
+    answers: { A: 0, B: 0 },
     survivorsCount: 0,
     eliminatedCount: 0,
     userAnswer: null,
-    roundResult: null,
   });
   const [socket, setSocket] = useState<Socket | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
@@ -132,6 +131,7 @@ export default function ShowPage() {
     });
 
     socket.on("round_result", (data: GameState) => {
+      console.log("📺 Received round_result:", data);
       setGameState(data);
       // 停止倒计时
       setCountdownActive(false);
@@ -477,7 +477,7 @@ export default function ShowPage() {
         )}
 
         {/* 在每局游戏中间展示本轮少数派答案和统计 */}
-        {gameState.roundResult && gameState?.status === "waiting" && (
+        {gameState && gameState?.status === "waiting" && gameState?.answers && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -485,26 +485,44 @@ export default function ShowPage() {
           >
             <div className="text-3xl font-bold text-yellow-300 mb-4">
               本轮少数派答案：
-              {gameState.roundResult.minorityAnswer === "A" ? "A" : "B"}
+              {(gameState?.answers?.A ?? 0) < (gameState?.answers?.B ?? 0)
+                ? "A"
+                : (gameState?.answers?.B ?? 0) < (gameState?.answers?.A ?? 0)
+                ? "B"
+                : "平局"}
             </div>
             <div className="flex flex-col md:flex-row justify-center gap-8 mb-4">
               <div className="bg-blue-500/80 rounded-xl px-8 py-4 text-white text-xl font-semibold">
-                选择A人数：{gameState.roundResult.answers.A}
+                选择A人数：{gameState?.answers?.A}
               </div>
               <div className="bg-pink-500/80 rounded-xl px-8 py-4 text-white text-xl font-semibold">
-                选择B人数：{gameState.roundResult.answers.B}
+                选择B人数：{gameState?.answers?.B}
               </div>
             </div>
             <div className="text-lg text-white mb-2">
               本轮存活人数：
               <span className="font-bold text-green-300">
-                {gameState.roundResult.survivorsCount}
+                {gameState?.answers?.A === gameState?.answers?.B ||
+                gameState?.answers?.A === 0 ||
+                gameState?.answers?.B === 0
+                  ? Math.max(
+                      gameState?.answers?.A || 0,
+                      gameState?.answers?.B || 0
+                    )
+                  : 0}
               </span>
             </div>
             <div className="text-lg text-white">
               本轮淘汰人数：
               <span className="font-bold text-red-300">
-                {gameState.roundResult.eliminatedCount}
+                {gameState?.answers?.A === gameState?.answers?.B ||
+                gameState?.answers?.A === 0 ||
+                gameState?.answers?.B === 0
+                  ? Math.min(
+                      gameState?.answers?.A || 0,
+                      gameState?.answers?.B || 0
+                    )
+                  : 0}
               </span>
             </div>
           </motion.div>

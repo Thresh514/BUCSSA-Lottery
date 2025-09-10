@@ -51,9 +51,10 @@ router.post('/next-question', async (req, res) => {
       optionB,
       startTime: new Date().toISOString()
     };
-    
+
     // 开始新一轮
     await gameManager.startNewRound(minorityQuestion);
+    await gameManager.setGameStartState(true);
 
     return res.status(200).json({ 
       message: '新题目已发布',
@@ -70,6 +71,7 @@ router.post('/reset-game', async (req, res) => {
   try {
     const gameManager = getGameManager();
     await gameManager.resetGame();
+    await gameManager.setGameStartState(false);
 
     return res.status(200).json({ message: '游戏已重置' });
   } catch (error) {

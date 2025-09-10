@@ -99,14 +99,13 @@ export default function AdminPage() {
   const [sentQuestions, setSentQuestions] = useState<Set<number>>(new Set());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
+    round: 0,
     status: "waiting",
     currentQuestion: null,
-    round: 0,
-    timeLeft: 0,
+    answers: { A: 0, B: 0 },
     survivorsCount: 0,
     eliminatedCount: 0,
     userAnswer: null,
-    roundResult: null,
   });
   const socketRef = useRef<Socket | null>(null);
 
@@ -251,13 +250,12 @@ export default function AdminPage() {
       if (response.ok) {
         setGameState({
           status: "waiting",
-          currentQuestion: null,
           round: 0,
-          timeLeft: 0,
+          currentQuestion: null,
+          answers: { A: 0, B: 0 },
           survivorsCount: 0,
           eliminatedCount: 0,
           userAnswer: null,
-          roundResult: null,
         });
         setSentQuestions(new Set());
       } else {
@@ -584,7 +582,7 @@ export default function AdminPage() {
             </div>
 
             {/* Round Statistics */}
-            {gameState?.roundResult && (
+            {gameState && (
               <div className="mt-4 p-4 bg-white/5 rounded-xl">
                 <h4 className="text-sm font-bold text-white mb-3">
                   当前轮次统计
@@ -592,22 +590,22 @@ export default function AdminPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="text-xl font-bold text-blue-400">
-                      {gameState?.roundResult?.answers.A}
+                      {gameState?.answers?.A}
                     </div>
                     <div className="text-gray-400 text-xs">选择 A</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-bold text-green-400">
-                      {gameState?.roundResult?.answers.B}
+                      {gameState?.answers?.B}
                     </div>
                     <div className="text-gray-400 text-xs">选择 B</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-bold text-red-400">
-                      {gameState?.roundResult?.answers.A +
-                        gameState?.roundResult?.answers.B -
-                        (gameState?.roundResult?.answers.A +
-                          gameState?.roundResult?.answers.B)}
+                      {(gameState?.answers?.A || 0) +
+                        (gameState?.answers?.B || 0) -
+                        ((gameState?.answers?.A || 0) +
+                          (gameState?.answers?.B || 0))}
                     </div>
                     <div className="text-gray-400 text-xs">未答题</div>
                   </div>

@@ -25,12 +25,17 @@ export { redis };
 
 // Redis key 生成器
 export const RedisKeys = {
+  gameStarted: (roomId: string) => `game:${roomId}:started`,
+
   // 当前题目信息
   currentQuestion: (roomId: string) => `current_question:${roomId}`,
   
   // 用户答题记录 - 使用邮箱作为用户标识
   userAnswer: (email: string, qid: string) => `user:${email}:answer:${qid}`,
-  
+
+  // 本轮结果
+  gameAnswers: (roomId: string) => `game:${roomId}:answers`,
+
   // 房间存活用户
   roomSurvivors: (roomId: string) => `room:${roomId}:survivors`,
   
