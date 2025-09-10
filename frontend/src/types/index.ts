@@ -23,21 +23,14 @@ export interface MinorityQuestion {
   startTime: string;
 }
 
-// 新题目消息
-export interface NewQuestion {
-  question: MinorityQuestion;
-  round: number;
-  timeLeft: number;
-  survivorsCount: number;
-}
-
 export interface GameState {
   status: "waiting" | "playing" | "ended";
-  currentQuestion: MinorityQuestion | null;
   round: number;
-  timeLeft: number;
+  currentQuestion: MinorityQuestion | null;
+  answers: { A: number; B: number } | null;
   survivorsCount: number;
   eliminatedCount: number;
+  userAnswer: 'A' | 'B' | null;
 }
 
 // 轮次结果消息
@@ -45,37 +38,24 @@ export interface RoundResult {
   minorityAnswer: 'A' | 'B';
   majorityAnswer: 'A' | 'B';
   answers: { A: number; B: number };
-  survivorsCount: number;
-  eliminatedCount: number;
 }
 
-// 答题提交
-export interface AnswerSubmission {
-  userEmail: string;
-  answer: 'A' | 'B';
+export interface hasWinner {
+  winnerEmail: string | null;
 }
 
-// 轮次统计
-export interface RoundStats {
-  question: MinorityQuestion;
-  answers: { A: number; B: number };
-  totalAnswers: number;
-  survivorsCount: number;
+export interface hasTie {
+  finalists: string[] | null;
 }
 
-export interface GameStats {
-  totalPlayers: number;
-  survivorsCount: number;
-  eliminatedCount: number;
-  currentRound: number;
-  status: string;
-  timeLeft: number;
-  roundStats?: RoundStats;
+export interface Eliminated {
+  userId: string;
 }
 
 // 游戏结束消息
 export interface GameEnded {
   winnerEmail: string | null;
+  finalists: string[] | null;
 }
 
 // JWT Payload

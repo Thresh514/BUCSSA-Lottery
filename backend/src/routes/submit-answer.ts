@@ -1,7 +1,8 @@
 import express from 'express';
-import { GameManager } from '../lib/game.js';
+import { getGameManager } from '../lib/game.js';
 
 const router = express.Router();
+
 
 router.post('/', async (req, res) => {
   try {
@@ -17,7 +18,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: '请选择A或B选项' });
     }
 
-    const gameManager = new GameManager();
+    const gameManager = getGameManager();
     
     // 提交答案
     await gameManager.submitAnswer(userEmail, answer);

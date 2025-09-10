@@ -1,40 +1,40 @@
 import express from 'express';
-import { GameManager} from '../lib/game.js';
-import { MinorityQuestion, GameStats, RoundStats} from '../types/index.js';
+import { getGameManager } from '../lib/game.js';
+import { MinorityQuestion } from '../types/index.js';
 
 const router = express.Router();
 
-// 获取游戏统计
-router.get('/game-stats', async (req, res) => {
-  try {
-    const gameManager = new GameManager();
+// // 获取游戏统计
+// router.get('/game-stats', async (req, res) => {
+//   try {
+//     const gameManager = getGameManager();
     
-    // 获取游戏统计信息
-    const gameStats = await gameManager.getGameStats();
+//     // 获取游戏统计信息
+//     const gameStats = await gameManager.getGameStats();
     
-    // 获取当前轮次统计（如果有进行中的轮次）
-    const roundStats = await gameManager.getRoundStats();
+//     // 获取当前轮次统计（如果有进行中的轮次）
+//     const roundStats = await gameManager.getRoundStats();
 
-    const allStats = {
-      ...gameStats,
-      roundStats,
-    }
+//     const allStats = {
+//       ...gameStats,
+//       roundStats,
+//     }
 
-    return res.status(200).json(allStats);
-  } catch (error) {
-    console.error('获取游戏统计错误:', error);
-    return res.status(500).json({ error: '服务器内部错误' });
-  }
-});
+//     return res.status(200).json(allStats);
+//   } catch (error) {
+//     console.error('获取游戏统计错误:', error);
+//     return res.status(500).json({ error: '服务器内部错误' });
+//   }
+// });
 
 // 发布下一题
 router.post('/next-question', async (req, res) => {
   try {
     const { question, optionA, optionB } = req.body;
 
-    const gameManager = new GameManager();
+    const gameManager = getGameManager();
 
-    if ((await gameManager.getGameState()).status === 'playing' || (await gameManager.getGameState()).status === 'ended') {
+    if ((await gameManager.getRoomState()).status === 'playing' || (await gameManager.getRoomState()).status === 'ended') {
       return res.status(400).json({ error: '当前有进行中的游戏轮次，请先结束再发布新题目' });
     }
 
@@ -51,9 +51,10 @@ router.post('/next-question', async (req, res) => {
       optionB,
       startTime: new Date().toISOString()
     };
-    
+
     // 开始新一轮
     await gameManager.startNewRound(minorityQuestion);
+    await gameManager.setGameStartState(true);
 
     return res.status(200).json({ 
       message: '新题目已发布',
@@ -68,8 +69,9 @@ router.post('/next-question', async (req, res) => {
 // 重置游戏
 router.post('/reset-game', async (req, res) => {
   try {
-    const gameManager = new GameManager();
+    const gameManager = getGameManager();
     await gameManager.resetGame();
+    await gameManager.setGameStartState(false);
 
     return res.status(200).json({ message: '游戏已重置' });
   } catch (error) {

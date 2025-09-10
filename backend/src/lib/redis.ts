@@ -25,12 +25,17 @@ export { redis };
 
 // Redis key 生成器
 export const RedisKeys = {
+  gameStarted: (roomId: string) => `game:${roomId}:started`,
+
   // 当前题目信息
   currentQuestion: (roomId: string) => `current_question:${roomId}`,
   
   // 用户答题记录 - 使用邮箱作为用户标识
   userAnswer: (email: string, qid: string) => `user:${email}:answer:${qid}`,
-  
+
+  // 本轮结果
+  gameAnswers: (roomId: string) => `game:${roomId}:answers`,
+
   // 房间存活用户
   roomSurvivors: (roomId: string) => `room:${roomId}:survivors`,
   
@@ -48,11 +53,17 @@ export const RedisKeys = {
   
   // 用户在线状态
   userOnline: (email: string) => `user:${email}:online`,
+
+  // 游戏平局状态
+  gameTie: (roomId: string) => `game:${roomId}:tie`,
   
   // 游戏获胜者
   gameWinner: (roomId: string) => `game:${roomId}:winner`,
 
+  // 管理员列表
   admin: () => "nextauth:admin_emails",
+
+  display: () => "nextauth:display_emails",
   
   // NextAuth 用户认证相关
   // 弃用功能

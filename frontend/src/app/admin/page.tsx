@@ -2,13 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { formatTime } from "@/lib/utils";
 import { io, Socket } from "socket.io-client";
 import {
-  Play,
   RotateCcw,
   Users,
   UserX,
@@ -18,22 +16,11 @@ import {
   WifiOff,
   Target,
   Activity,
-  BarChart3,
   Zap,
   Crown,
-  AlertTriangle,
-  Plus,
-  X,
   LogOut,
 } from "lucide-react";
-import {
-  GameEnded,
-  GameState,
-  GameStats,
-  MinorityQuestion,
-  RoundResult,
-  RoundStats,
-} from "@/types";
+import { GameState, MinorityQuestion } from "@/types";
 import { AlertBox } from "@/components/ui/alert-box";
 
 // 预设题目列表
@@ -103,26 +90,23 @@ const PRESET_QUESTIONS = [
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-
-  const [gameStats, setGameStats] = useState<GameStats>({
-    totalPlayers: 0,
-    survivorsCount: 0,
-    eliminatedCount: 0,
-    currentRound: 0,
-    status: "waiting",
-    timeLeft: 0,
-  });
-  const [currentQuestion, setCurrentQuestion] =
-    useState<MinorityQuestion | null>(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [connected, setConnected] = useState(false);
 
-  // 当前可发布的题目索引
-  const [nextQuestionIndex, setNextQuestionIndex] = useState(0);
+  const [connected, setConnected] = useState(false);
+  const [tie, setTie] = useState<string[] | null>(null);
+  const [winner, setWinner] = useState<string | null>(null);
+
   const [sentQuestions, setSentQuestions] = useState<Set<number>>(new Set());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
+  const [gameState, setGameState] = useState<GameState>({
+    round: 0,
+    status: "waiting",
+    currentQuestion: null,
+    answers: { A: 0, B: 0 },
+    survivorsCount: 0,
+    eliminatedCount: 0,
+    userAnswer: null,
+  });
   const socketRef = useRef<Socket | null>(null);
 
   // 认证检查
@@ -157,7 +141,9 @@ export default function AdminPage() {
       return;
     }
 
-    fetchGameStats();
+    if (session.user.isDisplay) {
+      return;
+    }
 
     const socket = io(process.env.NEXT_PUBLIC_API_BASE!, {
       auth: {
@@ -174,47 +160,34 @@ export default function AdminPage() {
       setConnected(false);
     });
 
+    socket.on("game_start", (data: GameState) => {
+      setGameState(data);
+    });
+
     socket.on("game_state", (data: GameState) => {
-      setGameStats((prev) => ({
-        ...prev,
-        status: data.status,
-        timeLeft: data.timeLeft,
-        survivorsCount: data.survivorsCount,
-        eliminatedCount: data.eliminatedCount,
-        currentRound: data.round,
-      }));
+      setGameState(data);
     });
 
-    socket.on("new_question", (data: any) => {
-      setCurrentQuestion(data.question);
-      fetchGameStats();
+    socket.on("new_question", (data: GameState) => {
+      setGameState(data);
     });
 
-    socket.on("countdown", (data: { timeLeft: number }) => {
-      setGameStats((prev) => ({
-        ...prev,
-        timeLeft: data.timeLeft,
-      }));
+    socket.on("round_result", (data: GameState) => {
+      setGameState(data);
     });
 
-    socket.on("round_result", (data: RoundResult) => {
-      setMessage(
-        `第${gameStats.currentRound}轮结束：少数派选项是 ${data.minorityAnswer}，A选择人数为${data.answers.A}人，B选择人数为${data.answers.B}人，淘汰人数为${data.eliminatedCount}人`
-      );
-      fetchGameStats();
+    socket.on("tie", (data: any) => {
+      setTie(data.finalists);
+      setWinner(null);
     });
 
-    socket.on("game_ended", (data: GameEnded) => {
-      setMessage(`游戏已结束！获胜者：${data.winnerEmail || "无"}`);
-      fetchGameStats();
+    socket.on("winner", (data: any) => {
+      setWinner(data.winnerEmail);
+      setTie(null);
     });
 
     socket.on("game_reset", () => {
-      setMessage("游戏已重置");
-      setCurrentQuestion(null);
-      setNextQuestionIndex(0);
       setSentQuestions(new Set());
-      fetchGameStats();
     });
 
     return () => {
@@ -222,30 +195,14 @@ export default function AdminPage() {
     };
   }, [status, session]); // Remove gameStats.currentRound dependency
 
-  const fetchGameStats = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE}/api/admin/game-stats`
-      );
-      if (response.ok) {
-        const stats = await response.json();
-        setGameStats(stats);
-      }
-    } catch (error) {
-      console.error("获取游戏统计失败:", error);
-    }
-  };
-
   const handleSubmitQuestion = async (questionIndex: number) => {
     if (questionIndex >= PRESET_QUESTIONS.length) {
-      setMessage("没有更多题目了");
       return;
     }
 
     const questionData = PRESET_QUESTIONS[questionIndex];
     const isRepublish = sentQuestions.has(questionIndex);
     setLoading(true);
-    setMessage("");
 
     try {
       const response = await fetch(
@@ -262,19 +219,12 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setCurrentQuestion(data.question);
-        setMessage(
-          `第${questionIndex + 1}题${isRepublish ? "重新" : ""}发布: ${
-            questionData.question
-          }`
-        );
         setSentQuestions((prev) => new Set([...prev, questionIndex]));
-        fetchGameStats();
       } else {
-        setMessage(data.error || "发布题目失败");
+        console.error(data.error || "发布题目失败");
       }
     } catch (error) {
-      setMessage("网络错误，请稍后重试");
+      console.error("网络错误，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -286,7 +236,6 @@ export default function AdminPage() {
     }
 
     setLoading(true);
-    setMessage("");
 
     try {
       const response = await fetch(
@@ -299,16 +248,21 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage(data.message);
-        setCurrentQuestion(null);
-        setNextQuestionIndex(0);
+        setGameState({
+          status: "waiting",
+          round: 0,
+          currentQuestion: null,
+          answers: { A: 0, B: 0 },
+          survivorsCount: 0,
+          eliminatedCount: 0,
+          userAnswer: null,
+        });
         setSentQuestions(new Set());
-        fetchGameStats();
       } else {
-        setMessage(data.error || "重置游戏失败");
+        console.error("重置游戏失败:", data.error);
       }
     } catch (error) {
-      setMessage("网络错误，请稍后重试");
+      console.error("重置游戏错误:", error);
     } finally {
       setLoading(false);
     }
@@ -319,7 +273,7 @@ export default function AdminPage() {
   };
 
   const getStatusColor = () => {
-    switch (gameStats.status) {
+    switch (gameState?.status) {
       case "playing":
         return "from-green-500 to-emerald-500";
       case "ended":
@@ -330,7 +284,7 @@ export default function AdminPage() {
   };
 
   const getStatusIcon = () => {
-    switch (gameStats.status) {
+    switch (gameState?.status) {
       case "playing":
         return <Activity className="w-6 h-6" />;
       case "ended":
@@ -341,7 +295,7 @@ export default function AdminPage() {
   };
 
   const getStatusText = () => {
-    switch (gameStats.status) {
+    switch (gameState?.status) {
       case "playing":
         return "答题进行中";
       case "ended":
@@ -358,31 +312,31 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-primary rounded-xl flex items-center justify-center">
-                <BarChart3 className="w-4 h-4 text-white" />
+              <div className="bg-gradient-primary rounded-xl flex items-center justify-center">
+                <Image
+                  src="/bucssalogo.png"
+                  alt="logo"
+                  width={48}
+                  height={48}
+                />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">
-                  少数派游戏 - 管理控制台
+                <h1 className="text-lg font-semibold text-white">
+                  BUCSSA 国庆晚会抽奖 - 管理控制台
                 </h1>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-300 text-sm">
-                    选择人数较少的选项晋级
+                <div className="flex items-center gap-1">
+                  {connected ? (
+                    <Wifi className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 text-red-400" />
+                  )}
+                  <span
+                    className={`text-xs font-medium ${
+                      connected ? "text-green-400" : "text-red-400"
+                    }`}
+                  >
+                    {connected ? "已连接" : "连接中..."}
                   </span>
-                  <div className="flex items-center gap-1">
-                    {connected ? (
-                      <Wifi className="w-3 h-3 text-green-400" />
-                    ) : (
-                      <WifiOff className="w-3 h-3 text-red-400" />
-                    )}
-                    <span
-                      className={`text-xs font-medium ${
-                        connected ? "text-green-400" : "text-red-400"
-                      }`}
-                    >
-                      {connected ? "已连接" : "连接中..."}
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -424,28 +378,14 @@ export default function AdminPage() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 animate-slide-up">
           <div className="glass rounded-xl p-4 hover-lift">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                <Trophy className="w-4 h-4 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-white">
-                  {gameStats.currentRound}
-                </p>
-                <p className="text-gray-400 text-xs">当前轮次</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass rounded-xl p-4 hover-lift">
-            <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
                 <Users className="w-4 h-4 text-green-400" />
               </div>
               <div>
                 <p className="text-xl font-bold text-white">
-                  {gameStats.survivorsCount}
+                  {gameState?.survivorsCount}
                 </p>
-                <p className="text-gray-400 text-xs">存活人数</p>
+                <p className="text-gray-400 text-sm">存活人数</p>
               </div>
             </div>
           </div>
@@ -457,9 +397,9 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-xl font-bold text-white">
-                  {gameStats.eliminatedCount}
+                  {gameState?.eliminatedCount}
                 </p>
-                <p className="text-gray-400 text-xs">淘汰人数</p>
+                <p className="text-gray-400 text-sm">淘汰人数</p>
               </div>
             </div>
           </div>
@@ -471,29 +411,47 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-xl font-bold text-white">
-                  {gameStats.totalPlayers}
+                  {gameState.survivorsCount ||
+                    0 + gameState.eliminatedCount ||
+                    0}
                 </p>
-                <p className="text-gray-400 text-xs">总参与人数</p>
+                <p className="text-gray-400 text-sm">总参与人数</p>
               </div>
             </div>
           </div>
 
           <div className="glass rounded-xl p-4 hover-lift">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                <Clock className="w-4 h-4 text-orange-400" />
+              <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <Crown className="w-4 h-4 text-green-400" />
               </div>
               <div>
-                <p
-                  className={`text-xl font-bold ${
-                    gameStats.timeLeft <= 10
-                      ? "text-red-400 animate-pulse"
-                      : "text-white"
-                  }`}
-                >
-                  {formatTime(gameStats.timeLeft)}
-                </p>
-                <p className="text-gray-400 text-xs">剩余时间</p>
+                {winner ? (
+                  <p className="text-md font-bold text-white">{winner}</p>
+                ) : (
+                  <p className="text-white text-xl font-bold">暂无获胜玩家</p>
+                )}
+
+                <p className="text-gray-400 text-sm">获胜者</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass rounded-xl p-4 hover-lift">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <Trophy className="w-4 h-4 text-yellow-400" />
+              </div>
+              <div>
+                {tie ? (
+                  <p className="text-md font-bold text-white">
+                    {tie.join(", ")}
+                  </p>
+                ) : (
+                  <p className="text-white text-xl font-bold">暂无平手玩家</p>
+                )}
+
+                <p className="text-gray-400 text-sm">决赛圈</p>
               </div>
             </div>
           </div>
@@ -502,18 +460,18 @@ export default function AdminPage() {
         {/* 题目列表 - 始终可见 */}
         <div className="glass rounded-2xl p-5 animate-slide-up">
           <div className="text-center mb-5">
-            <h3 className="text-lg font-bold text-white mb-2">题目列表</h3>
-            <p className="text-gray-400 text-sm">
+            <h3 className="text-xl font-bold text-white mb-2">题目列表</h3>
+            <p className="text-gray-400 text-md">
               共 {PRESET_QUESTIONS.length} 道题目，已发布 {sentQuestions.size}{" "}
               题
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-82 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3  overflow-y-auto">
             {PRESET_QUESTIONS.map((question, index) => {
               const isSent = sentQuestions.has(index);
-              const isCurrentlyPlaying = gameStats.status === "playing";
-              const isGameEnded = gameStats.status === "ended";
+              const isCurrentlyPlaying = gameState?.status === "playing";
+              const isGameEnded = gameState?.status === "ended";
               const canPublish =
                 !loading && !isCurrentlyPlaying && !isGameEnded;
 
@@ -524,7 +482,7 @@ export default function AdminPage() {
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-md ${
                         isSent
                           ? "bg-green-500 text-white"
                           : "bg-gray-500 text-white"
@@ -533,7 +491,7 @@ export default function AdminPage() {
                       {index + 1}
                     </div>
                     <span
-                      className={`text-xs font-medium ${
+                      className={`text-md font-medium ${
                         isSent ? "text-green-400" : "text-gray-400"
                       }`}
                     >
@@ -541,36 +499,36 @@ export default function AdminPage() {
                     </span>
                   </div>
 
-                  <h4 className="text-white font-medium mb-2 text-xs leading-relaxed">
+                  <h4 className="text-white font-medium mb-2 text-md leading-relaxed">
                     {question.question}
                   </h4>
 
                   <div className="space-y-1 mb-3">
                     <div className="flex items-center gap-1">
-                      <span className="w-4 h-4 bg-blue-500/20 rounded flex items-center justify-center text-xs text-blue-400 font-bold">
+                      <span className="flex items-center justify-center text-md text-blue-400 font-bold">
                         A
                       </span>
-                      <span className="text-gray-300 text-xs truncate">
+                      <span className="text-gray-300 text-md truncate">
                         {question.optionA}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="w-4 h-4 bg-pink-500/20 rounded flex items-center justify-center text-xs text-pink-400 font-bold">
+                      <span className="flex items-center justify-center text-md text-pink-400 font-bold">
                         B
                       </span>
-                      <span className="text-gray-300 text-xs truncate">
+                      <span className="text-gray-300 text-md truncate">
                         {question.optionB}
                       </span>
                     </div>
                   </div>
 
                   {/* 发布按钮 */}
-                  <div className="flex justify-end">
+                  <div className="flex justify-center items-center">
                     <Button
                       onClick={() => handleSubmitQuestion(index)}
                       disabled={!canPublish}
                       size="sm"
-                      className={`h-7 px-3 text-xs font-medium transition-all duration-200 ${
+                      className={`w-full text-md transition-all duration-200 ${
                         canPublish
                           ? isSent
                             ? "bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white hover-lift"
@@ -588,14 +546,14 @@ export default function AdminPage() {
         </div>
 
         {/* Current Question Display */}
-        {currentQuestion && (
+        {gameState.currentQuestion && (
           <div className="glass rounded-2xl p-5 animate-slide-up">
             <div className="text-center mb-5">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-primary rounded-full text-white font-medium mb-4 text-sm">
-                <Zap className="w-3 h-3" />第 {gameStats.currentRound} 题
+                <Zap className="w-3 h-3" />第 {gameState.round} 题
               </div>
               <h2 className="text-xl font-bold text-white mb-4">
-                {currentQuestion.question}
+                {gameState.currentQuestion.question}
               </h2>
             </div>
 
@@ -606,7 +564,7 @@ export default function AdminPage() {
                     <span className="text-white font-bold text-sm">A</span>
                   </div>
                   <p className="text-white text-sm font-medium">
-                    {currentQuestion.optionA}
+                    {gameState.currentQuestion.optionA}
                   </p>
                 </div>
               </div>
@@ -617,14 +575,14 @@ export default function AdminPage() {
                     <span className="text-white font-bold text-sm">B</span>
                   </div>
                   <p className="text-white text-sm font-medium">
-                    {currentQuestion.optionB}
+                    {gameState.currentQuestion.optionB}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Round Statistics */}
-            {gameStats.roundStats && (
+            {gameState && (
               <div className="mt-4 p-4 bg-white/5 rounded-xl">
                 <h4 className="text-sm font-bold text-white mb-3">
                   当前轮次统计
@@ -632,37 +590,28 @@ export default function AdminPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="text-xl font-bold text-blue-400">
-                      {gameStats.roundStats.answers.A}
+                      {gameState?.answers?.A}
                     </div>
                     <div className="text-gray-400 text-xs">选择 A</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-bold text-green-400">
-                      {gameStats.roundStats.answers.B}
+                      {gameState?.answers?.B}
                     </div>
                     <div className="text-gray-400 text-xs">选择 B</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-bold text-red-400">
-                      {gameStats.roundStats.totalAnswers -
-                        (gameStats.roundStats.answers.A +
-                          gameStats.roundStats.answers.B)}
+                      {(gameState?.answers?.A || 0) +
+                        (gameState?.answers?.B || 0) -
+                        ((gameState?.answers?.A || 0) +
+                          (gameState?.answers?.B || 0))}
                     </div>
                     <div className="text-gray-400 text-xs">未答题</div>
                   </div>
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Message Display */}
-        {message && (
-          <div className="glass rounded-xl p-4 animate-scale-in">
-            <div className="flex items-center gap-2 text-yellow-400">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="font-medium text-sm">{message}</span>
-            </div>
           </div>
         )}
       </main>

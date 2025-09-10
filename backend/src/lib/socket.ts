@@ -1,7 +1,8 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { redis, RedisKeys } from './redis.js';
-import { GameManager } from './game.js';
+import { getGameManager } from './game.js';
+import { GameState } from '../types/index.js';
 
 
 // 全局Socket.IO服务器实例
@@ -37,9 +38,6 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         email,
       };
 
-      // 更新用户在线状态
-      await redis.set(RedisKeys.userOnline(email), '1', { EX: 300 }); // 5分钟过期
-
       next();
     } catch (error) {
       next(new Error('认证失败'));
@@ -48,96 +46,90 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
   // 连接事件处理
   io.on('connection', async (socket) => {
+    const gameManager = getGameManager();
     const user = socket.data.user;
 
     // 用户加入游戏房间
     const roomId = process.env.DEFAULT_ROOM_ID!;
     socket.join(roomId);
 
-    // 检查用户是否已在游戏中，如果不在则添加到存活列表
-    const gameManager = new GameManager();
-    const isInGame = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
-    const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(roomId), user.email);
-    const isWinner = await redis.get(RedisKeys.gameWinner(roomId)) === user.email;
+    const gameStarted = await redis.get(RedisKeys.gameStarted(roomId)) === '1';
     const isAdmin = await redis.sIsMember(RedisKeys.admin(), user.email);
-    
-    if (!isInGame && !isEliminated && !isAdmin) {
+    const isDisplay = await redis.sIsMember(RedisKeys.display(), user.email);
+    const isSurviving = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
+    const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(roomId), user.email);
+    const tieSet = await redis.sMembers(RedisKeys.gameTie(roomId))
+    const isTie = tieSet ? tieSet.includes(user.email) : false;
+    const isWinner = await redis.get(RedisKeys.gameWinner(roomId)) === user.email;
+    const isExistingPlayer = isSurviving || isEliminated || isWinner || isTie;
+
+
+    // Only block NEW users from joining if game has started
+    // Allow existing players (survivors, eliminated, winners, tied) to reconnect
+
+    if (gameStarted && !isAdmin && !isDisplay && !isExistingPlayer) {
+      socket.emit('redirect', {
+        message: '游戏已开始，请等待下一轮游戏'
+      });
+      socket.disconnect();
+      return;
+    }
+
+    if (!isAdmin && !isDisplay && !isExistingPlayer) {
       // 新用户加入游戏
       await gameManager.addPlayer(user.email);
+      gameManager.emitPlayerCountUpdate();
     }
 
-    // 发送当前游戏状态
-    const gameState = await gameManager.getGameState();
-    socket.emit('game_state', gameState);
+    const roomState = await gameManager.getRoomState();
 
-    if (gameState.status === 'playing' && gameState.currentQuestion) {
-
-      try {
-        const questionId = gameState.currentQuestion.id;
+    if (isAdmin) {
+      const gameState = { ...roomState, "userAnswer": null };
+      socket.emit("game_state", gameState);
+    } else if (isDisplay) {
+      const gameState = { ...roomState, "userAnswer": null };
+      socket.emit("game_state", gameState);
+    } else {
+      if (isWinner) {
+        socket.emit('winner', { 
+          userId: user.email,
+          message: '恭喜您获得第一名！' 
+        });
+        socket.emit("game_state", { ...roomState, userAnswer: null });
+      } else if (isTie) {
+        socket.emit('tie', { 
+          finalists: [user.email],
+        });
+        socket.emit("game_state", { ...roomState, userAnswer: null });
+      } else if (isEliminated) {
+        socket.emit('eliminated', { 
+          "eliminated": [user.email],
+        });
+        socket.emit("game_state", { ...roomState, userAnswer: null });
+      } else {
+        const questionId = roomState.currentQuestion.id;
         const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
-
-        if (userAnswer) {
-          socket.emit('user_answer', {
-            questionId,
-            answer: userAnswer,
-          });
+        const game_state = {
+          ...roomState,
+          "userAnswer": userAnswer || null,
         }
-      } catch (error: any) {
-        socket.emit('error', { message: error.message });
+        socket.emit("game_state", game_state);
       }
     }
 
-    // 如果用户已被淘汰，立即通知
-    if (isEliminated) {
-      socket.emit('eliminated', { 
-        userId: user.email,
-        message: '您已被淘汰' 
-      });
+    if (isDisplay) {
+      const remainingTime = gameManager.getCurrentTimeLeft();
+      socket.emit('countdown_update', { timeLeft: remainingTime });
     }
-
-    if (isWinner) {
-      socket.emit('winner', { 
-        userId: user.email,
-        message: '恭喜您获得第一名！' 
-      });
-    }
-
-    // 处理答题提交
-    // not used
-    socket.on('submit_answer', async (data) => {
-      const { answer } = data;
-
-      if (!answer || !['A', 'B'].includes(answer)) {
-        socket.emit('error', { message: '请选择A或B选项' });
-        return;
-      }
-
-      // 检查用户是否还在存活列表中
-      const roomId = process.env.DEFAULT_ROOM_ID!;
-      const isAlive = await redis.sismember(RedisKeys.roomSurvivors(roomId), user.email);
-      if (!isAlive) {
-        socket.emit('error', { message: '您已被淘汰，无法答题' });
-        return;
-      }
-
-      try {
-        // 使用GameManager提交答案
-        await gameManager.submitAnswer(user.email, answer);
-        
-        // 更新用户在线状态
-        await redis.set(RedisKeys.userOnline(user.email), '1', { EX: 300 });
-
-      } catch (error: any) {
-        socket.emit('error', { message: error.message });
-      }
-    });
 
     // 断开连接处理
     socket.on('disconnect', () => {
       const user = socket.data.user;
-      if (user) {
+      if (user && !isAdmin && !isDisplay) {
         redis.del(RedisKeys.userOnline(user.email));
+        // redis.sRem(RedisKeys.roomSurvivors(roomId), user.email);
       }
+      gameManager.emitPlayerCountUpdate();
     });
   });
 
