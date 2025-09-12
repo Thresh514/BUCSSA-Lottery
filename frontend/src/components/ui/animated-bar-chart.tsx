@@ -32,6 +32,59 @@ const AnimatedNumber: React.FC<{ value: number; delay: number }> = ({ value, del
   );
 };
 
+// 每一条柱子组件
+const BarItem: React.FC<{
+  item: { label: string; value: number; color: string; bgColor: string; borderColor: string };
+  index: number;
+  max: number;
+  isVisible: boolean;
+}> = ({ item, index, max, isVisible }) => {
+  const safeValue = Math.max(0, item.value || 0);
+
+  // ✅ 在子组件顶层调用 useSpring
+  const barAnimation = useSpring({
+    from: { width: '0%' },
+    to: { width: isVisible ? `${(safeValue / max) * 100}%` : '0%' },
+    delay: index * 300,
+    config: { duration: 2000, tension: 120, friction: 14 }
+  });
+
+  return (
+    <motion.div
+      className="space-y-2"
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.2, duration: 0.5 }}
+    >
+      {/* 标签和数值 */}
+      <div className="flex justify-between items-center">
+        <span className="text-lg font-semibold" style={{ color: item.color }}>
+          {item.label}
+        </span>
+        <div className="text-3xl font-bold" style={{ color: item.color }}>
+          <AnimatedNumber value={safeValue} delay={index * 0.3} />
+        </div>
+      </div>
+
+      {/* 柱状图容器 */}
+      <div className="relative h-8 bg-gray-200 rounded-full overflow-hidden">
+        <animated.div
+          className="h-full rounded-full flex items-center justify-end pr-4"
+          style={{
+            backgroundColor: item.bgColor,
+            border: `2px solid ${item.borderColor}`,
+            ...barAnimation
+          }}
+        >
+          <span className="text-sm font-bold" style={{ color: item.color }}>
+            {safeValue}
+          </span>
+        </animated.div>
+      </div>
+    </motion.div>
+  );
+};
+
 const AnimatedBarChart: React.FC<AnimatedBarChartProps> = ({ 
   data, 
   maxValue, 
@@ -65,59 +118,15 @@ const AnimatedBarChart: React.FC<AnimatedBarChartProps> = ({
 
   return (
     <div className="space-y-6">
-      {validData.map((item, index) => {
-        const safeValue = Math.max(0, item.value || 0);
-        
-        // 使用 react-spring 的柱状图动画
-        const barAnimation = useSpring({
-          from: { width: '0%' },
-          to: { width: isVisible ? `${(safeValue / max) * 100}%` : '0%' },
-          delay: index * 300,
-          config: { duration: 2000, tension: 120, friction: 14 }
-        });
-        
-        return (
-          <motion.div
-            key={item.label}
-            className="space-y-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.2, duration: 0.5 }}
-          >
-            {/* 标签和数值 */}
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold" style={{ color: item.color }}>
-                {item.label}
-              </span>
-              <div className="text-3xl font-bold" style={{ color: item.color }}>
-                <AnimatedNumber
-                  value={safeValue}
-                  delay={index * 0.3}
-                />
-              </div>
-            </div>
-
-            {/* 柱状图容器 */}
-            <div className="relative h-8 bg-gray-200 rounded-full overflow-hidden">
-              <animated.div
-                className="h-full rounded-full flex items-center justify-end pr-4"
-                style={{ 
-                  backgroundColor: item.bgColor,
-                  border: `2px solid ${item.borderColor}`,
-                  ...barAnimation
-                }}
-              >
-                <span 
-                  className="text-sm font-bold"
-                  style={{ color: item.color }}
-                >
-                  {safeValue}
-                </span>
-              </animated.div>
-            </div>
-          </motion.div>
-        );
-      })}
+      {validData.map((item, index) => (
+        <BarItem
+          key={item.label}
+          item={item}
+          index={index}
+          max={max}
+          isVisible={isVisible}
+        />
+      ))}
     </div>
   );
 };
