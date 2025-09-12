@@ -1,5 +1,3 @@
-import { motion } from 'framer-motion';
-
 interface BackgroundImageProps {
   imageUrl: string;
   overlayOpacity?: number;
@@ -9,7 +7,7 @@ interface BackgroundImageProps {
 
 const BackgroundImage = ({ 
   imageUrl, 
-  overlayOpacity = 0.3, 
+  overlayOpacity = 0.05, 
   centerMask = true,
   maskWidth = 60 
 }: BackgroundImageProps) => {
@@ -34,7 +32,7 @@ const BackgroundImage = ({
         <div 
           className="absolute inset-0"
           style={{
-            background: `radial-gradient(ellipse ${maskWidth}% 100% at center, transparent 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.7) 80%, rgba(0,0,0,0.8) 100%)`,
+            background: `radial-gradient(ellipse ${maskWidth}% 100% at center, transparent 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.3) 80%, rgba(0,0,0,0.4) 90%)`,
             backdropFilter: 'blur(1px)',
           }}
         />

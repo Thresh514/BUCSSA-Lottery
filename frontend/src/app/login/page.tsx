@@ -7,6 +7,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Box } from '@/components/ui/box';
+import { GlassText, GlassTitle } from '@/components/ui/glass-text';
+import BackgroundImage from '@/components/game/BackgroundImage';
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
@@ -34,15 +38,23 @@ export default function LoginPage() {
   };
 
   return (
+    <>
+      {/* 背景图片 */}
+      <BackgroundImage 
+        imageUrl="bgnb.jpg"  // 在这里设置你的背景图片路径
+        overlayOpacity={0.05}        // 整体遮罩透明度，0-1之间
+        centerMask={true}           // 启用中间渐变蒙版
+        maskWidth={90}              // 中间蒙版宽度，80%的屏幕宽度
+      />
+      
     <div className="min-h-screen flex flex-col">
       {/* 返回首页 */}
       <div className="p-4">
-        <Link
-          href="/"
-          className="inline-flex items-center text-gray-400 hover:text-white transition-colors"
-        >
-          <ArrowRight className="w-4 h-4 rotate-180 mr-2" />
-          返回首页
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="text-white/80 hover:text-white">
+            <ArrowRight className="w-4 h-4 rotate-180 mr-2" />
+            返回首页
+          </Button>
         </Link>
       </div>
 
@@ -54,15 +66,16 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           
-          <div className="text-center mb-4">
-            <h1 className="text-3xl font-bold text-white">登录</h1>
+          <div className="text-center mb-8 text-2xl font-bold">
+            登录
           </div>
 
-          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
+          <div className="text-center">
             {/* Google 登录按钮 */}
-            <button
+            <Button
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center bg-white text-gray-800 rounded-lg px-4 py-3 font-medium transition-all duration-300 hover:shadow-lg hover:scale-105 mb-4"
+              size="lg"
+              className="w-full mb-6"
             >
               <Image
                 src="/google.svg"
@@ -72,16 +85,16 @@ export default function LoginPage() {
                 className="mr-2"
               />
               使用 Google 账户登录
-            </button>
+            </Button>
 
             {/* 提示信息 */}
-            <p className="text-sm text-gray-400 text-center mt-4">
+            <GlassText variant="muted" size="sm">
               仅支持 Gmail 邮箱登录
-            </p>
-
+            </GlassText>
           </div>
         </motion.div>
       </div>
     </div>
+    </>
   );
 } 
