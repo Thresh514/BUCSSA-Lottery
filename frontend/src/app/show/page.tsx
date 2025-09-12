@@ -35,6 +35,7 @@ export default function ShowPage() {
     survivorsCount: 0,
     eliminatedCount: 0,
     userAnswer: null,
+    timeLeft: 0,
   });
   const [socket, setSocket] = useState<Socket | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
@@ -135,7 +136,7 @@ export default function ShowPage() {
       console.log("📺 Received new_question:", data);
       setGameState(data);
       // 重置倒计时
-      setFrontendTimeLeft(30);
+      setFrontendTimeLeft(data.timeLeft);
       setCountdownActive(true);
     });
 

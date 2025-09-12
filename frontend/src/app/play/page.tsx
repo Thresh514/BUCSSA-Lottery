@@ -43,6 +43,7 @@ export default function PlayPage() {
     survivorsCount: 0,
     eliminatedCount: 0,
     userAnswer: null,
+    timeLeft: 0,
   });
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
   const [isEliminated, setIsEliminated] = useState(false);

@@ -31,6 +31,7 @@ export interface GameState {
   survivorsCount: number;
   eliminatedCount: number;
   userAnswer: 'A' | 'B' | null;
+  timeLeft: number;
 }
 
 // 轮次结果消息

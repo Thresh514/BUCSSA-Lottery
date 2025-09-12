@@ -226,6 +226,7 @@ export default function AdminPage() {
     survivorsCount: 0,
     eliminatedCount: 0,
     userAnswer: null,
+    timeLeft: 0,
   });
   const socketRef = useRef<Socket | null>(null);
 
@@ -376,6 +377,7 @@ export default function AdminPage() {
           survivorsCount: 0,
           eliminatedCount: 0,
           userAnswer: null,
+          timeLeft: 0,
         });
         setSentQuestions(new Set());
       } else {

@@ -71,7 +71,7 @@ export class GameManager {
       currentQuestion: currentQuestion || null,
       round: parseInt(currentRound || '0'),
       answers: answers && (answers.A || answers.B) ? { A: parseInt(answers.A || '0'), B: parseInt(answers.B || '0') } : null,
-      timeLeft: parseInt(gameState.timeLeft || '0'),
+      timeLeft: this.getCurrentTimeLeft(),
       survivorsCount,
       eliminatedCount,
     };
@@ -134,10 +134,25 @@ export class GameManager {
     }
   }
 
-  // 倒计时处理
-  private startCountdown(): void {
-    let timeLeft = 30;
+  // 倒计时处理 - 根据存活人数自适应时间
+  private async startCountdown(): Promise<void> {
+    const survivorsCount = await redis.sCard(RedisKeys.roomSurvivors(this.roomId));
+    
+    let timeLeft: number;
+    if (survivorsCount <= 40) {
+      timeLeft = 15;
+    } else if (survivorsCount <= 75) {
+      timeLeft = 20;
+    } else if (survivorsCount <= 150) {
+      timeLeft = 30;
+    } else {
+      timeLeft = 40;
+    }
+    
     this.currentTimeLeft = timeLeft;
+    
+    // 更新Redis中的时间
+    // await redis.hSet(RedisKeys.gameState(this.roomId), 'timeLeft', timeLeft.toString());
     
     // Clear any existing countdown
     if (this.countdownInterval) {
@@ -147,6 +162,9 @@ export class GameManager {
     this.countdownInterval = setInterval(async () => {
       timeLeft--;
       this.currentTimeLeft = timeLeft;
+      
+      // 实时更新Redis中的时间
+      // await redis.hSet(RedisKeys.gameState(this.roomId), 'timeLeft', timeLeft.toString());
       
       if (timeLeft <= 0) {
         clearInterval(this.countdownInterval!);
@@ -339,21 +357,21 @@ export class GameManager {
   }
 
   // 获取游戏统计
-  async getGameStats() {
-    const survivorsCount = await redis.sCard(RedisKeys.roomSurvivors(this.roomId)) as number;
-    const eliminatedCount = await redis.sCard(RedisKeys.roomEliminated(this.roomId)) as number;
-    const currentRound = await redis.get(RedisKeys.currentRound(this.roomId));
-    const gameState = await redis.hGetAll(RedisKeys.gameState(this.roomId)) as any;
+  // async getGameStats() {
+  //   const survivorsCount = await redis.sCard(RedisKeys.roomSurvivors(this.roomId)) as number;
+  //   const eliminatedCount = await redis.sCard(RedisKeys.roomEliminated(this.roomId)) as number;
+  //   const currentRound = await redis.get(RedisKeys.currentRound(this.roomId));
+  //   const gameState = await redis.hGetAll(RedisKeys.gameState(this.roomId)) as any;
     
-    return {
-      totalPlayers: (survivorsCount || 0) + (eliminatedCount || 0),
-      survivorsCount: survivorsCount || 0,
-      eliminatedCount: eliminatedCount || 0,
-      currentRound: parseInt(currentRound || '0'),
-      status: gameState?.status || 'waiting',
-      timeLeft: parseInt(gameState?.timeLeft || '0'),
-    };
-  }
+  //   return {
+  //     totalPlayers: (survivorsCount || 0) + (eliminatedCount || 0),
+  //     survivorsCount: survivorsCount || 0,
+  //     eliminatedCount: eliminatedCount || 0,
+  //     currentRound: parseInt(currentRound || '0'),
+  //     status: gameState?.status || 'waiting',
+  //     timeLeft: this.getCurrentTimeLeft(),
+  //   };
+  // }
 
   // 获取当前轮次统计
   // async getRoundStats() {
