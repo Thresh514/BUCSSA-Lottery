@@ -41,6 +41,7 @@ export default function ShowPage() {
   const [tie, setTie] = useState<string[] | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState<boolean>(false);
   const [showTieModal, setShowTieModal] = useState<boolean>(false);
+  const [updatedWinnerTie, setUpdatedWinnerTie] = useState<boolean>(false);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -148,9 +149,12 @@ export default function ShowPage() {
 
     socket.on("tie", (data: hasTie) => {
       console.log("📺 Received game_tie:", data.finalists);
-      setTie(data.finalists);
-      setCountdownActive(false);
-      setFrontendTimeLeft(0);
+      if (data.finalists && data.finalists.length === 2) {
+        setTie(data.finalists);
+        setCountdownActive(false);
+        setFrontendTimeLeft(0);
+        setUpdatedWinnerTie(true);
+      }
     });
 
     socket.on("winner", (data: hasWinner) => {
@@ -158,6 +162,7 @@ export default function ShowPage() {
       setWinner(data.winnerEmail);
       setCountdownActive(false);
       setFrontendTimeLeft(0);
+      setUpdatedWinnerTie(true);
     });
 
     return () => {
@@ -299,12 +304,12 @@ export default function ShowPage() {
               <div className="w-32 h-1 bg-gradient-to-r from-yellow-400 to-orange-500 mx-auto rounded-full" />
             </motion.div>
             <motion.div
-              className="mt-8 text-lg text-gray-300"
+              className="mt-8 text-lg text-gray-300 p-4 border border-white/50 rounded-lg"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.5, duration: 0.5 }}
             >
-              点击任意位置关闭
+              点击此处关闭
             </motion.div>
           </motion.div>
         </div>
@@ -438,12 +443,12 @@ export default function ShowPage() {
           </motion.div>
           
           <motion.div
-            className="mt-8 text-lg text-gray-300 fixed bottom-12 left-1/2 -translate-x-1/2 text-center"
+            className="mt-8 text-lg text-gray-300 fixed bottom-12 left-1/2 -translate-x-1/2 text-center p-4 border border-white/50 rounded-lg"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.5, duration: 0.5 }}
           >
-            点击任意位置关闭
+            点击此处关闭
           </motion.div>
         </div>
       )}
@@ -509,6 +514,60 @@ export default function ShowPage() {
           </div>
         </div>
       </div>
+
+      {/* Debug Section */}
+      {/* <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="bg-black/20 backdrop-blur-sm border border-yellow-400/50 rounded-lg p-4 mb-4">
+          <h3 className="text-yellow-400 font-bold text-lg mb-3">🐛 Debug Info</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+            <div className="space-y-2">
+              <div className="text-gray-300">
+                <span className="text-yellow-300">winner:</span> {winner ? `"${winner}"` : 'null'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">tie:</span> {tie ? `[${tie.join(', ')}]` : 'null'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">showWinnerModal:</span> {showWinnerModal ? 'true' : 'false'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">showTieModal:</span> {showTieModal ? 'true' : 'false'}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-gray-300">
+                <span className="text-yellow-300">gameState.status:</span> {gameState?.status || 'null'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">gameState.round:</span> {gameState?.round || 'null'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">gameState.survivorsCount:</span> {gameState?.survivorsCount || 'null'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">gameState.eliminatedCount:</span> {gameState?.eliminatedCount || 'null'}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-gray-300">
+                <span className="text-yellow-300">frontendTimeLeft:</span> {frontendTimeLeft}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">countdownActive:</span> {countdownActive ? 'true' : 'false'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">socket connected:</span> {socket ? 'true' : 'false'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">answers A:</span> {gameState?.answers?.A || 'null'}
+              </div>
+              <div className="text-gray-300">
+                <span className="text-yellow-300">answers B:</span> {gameState?.answers?.B || 'null'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> */}
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* 游戏统计面板 */}
@@ -748,7 +807,7 @@ export default function ShowPage() {
         )}
 
         {/* 在每局游戏中间展示本轮少数派答案和统计 */}
-        {gameState && gameState?.status === "waiting" && gameState?.answers && (
+        {gameState && gameState?.status === "waiting" && gameState?.answers && !winner && !tie && updatedWinnerTie && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

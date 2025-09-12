@@ -55,36 +55,156 @@ const PRESET_QUESTIONS = [
     optionA: "早起有害",
     optionB: "晚睡有害",
   },
-  // {
-  //   id: "q6",
-  //   question: "你更愿意选择高薪但压力大的工作吗？",
-  //   optionA: "愿意",
-  //   optionB: "不愿意",
-  // },
-  // {
-  //   id: "q7",
-  //   question: "你认为人工智能会完全取代人类工作吗？",
-  //   optionA: "会取代",
-  //   optionB: "不会取代",
-  // },
-  // {
-  //   id: "q8",
-  //   question: "你更喜欢夏天还是冬天？",
-  //   optionA: "夏天",
-  //   optionB: "冬天",
-  // },
-  // {
-  //   id: "q9",
-  //   question: "你觉得网购还是实体店购物更好？",
-  //   optionA: "网购更好",
-  //   optionB: "实体店更好",
-  // },
-  // {
-  //   id: "q10",
-  //   question: "你认为运气比努力更重要吗？",
-  //   optionA: "运气更重要",
-  //   optionB: "努力更重要",
-  // },
+  {
+    id: "q6",
+    question: "你更愿意选择高薪但压力大的工作吗？",
+    optionA: "愿意",
+    optionB: "不愿意",
+  },
+  {
+    id: "q7",
+    question: "你认为人工智能会完全取代人类工作吗？",
+    optionA: "会取代",
+    optionB: "不会取代",
+  },
+  {
+    id: "q8",
+    question: "你更喜欢夏天还是冬天？",
+    optionA: "夏天",
+    optionB: "冬天",
+  },
+  {
+    id: "q9",
+    question: "你觉得网购还是实体店购物更好？",
+    optionA: "网购更好",
+    optionB: "实体店更好",
+  },
+  {
+    id: "q10",
+    question: "你认为运气比努力更重要吗？",
+    optionA: "运气更重要",
+    optionB: "努力更重要",
+  },
+  {
+    id: "q11",
+    question: "你相信一见钟情吗？",
+    optionA: "相信",
+    optionB: "不相信",
+  },
+  {
+    id: "q12",
+    question: "你觉得异地恋能长久吗？",
+    optionA: "能长久",
+    optionB: "不能长久",
+  },
+  {
+    id: "q13",
+    question: "你认为年龄差距会影响感情吗？",
+    optionA: "会影响",
+    optionB: "不会影响",
+  },
+  {
+    id: "q14",
+    question: "你觉得网恋靠谱吗？",
+    optionA: "靠谱",
+    optionB: "不靠谱",
+  },
+  {
+    id: "q15",
+    question: "你认为门当户对重要吗？",
+    optionA: "重要",
+    optionB: "不重要",
+  },
+  {
+    id: "q16",
+    question: "你觉得恋爱中应该AA制吗？",
+    optionA: "应该AA",
+    optionB: "不应该AA",
+  },
+  {
+    id: "q17",
+    question: "你认为恋爱多久适合结婚？",
+    optionA: "一年以内",
+    optionB: "一年以上",
+  },
+  {
+    id: "q18",
+    question: "你觉得分手后还能做朋友吗？",
+    optionA: "能做朋友",
+    optionB: "不能做朋友",
+  },
+  {
+    id: "q19",
+    question: "你认为恋爱中需要保持神秘感吗？",
+    optionA: "需要",
+    optionB: "不需要",
+  },
+  {
+    id: "q20",
+    question: "你觉得恋爱中应该完全坦诚吗？",
+    optionA: "应该坦诚",
+    optionB: "不应该完全坦诚",
+  },
+  {
+    id: "q21",
+    question: "你认为恋爱中需要个人空间吗？",
+    optionA: "需要",
+    optionB: "不需要",
+  },
+  {
+    id: "q22",
+    question: "你觉得恋爱中应该经常送礼物吗？",
+    optionA: "应该经常送",
+    optionB: "不需要经常送",
+  },
+  {
+    id: "q23",
+    question: "你认为恋爱中需要经常说甜言蜜语吗？",
+    optionA: "需要",
+    optionB: "不需要",
+  },
+  {
+    id: "q24",
+    question: "你觉得恋爱中应该经常吵架吗？",
+    optionA: "应该经常吵",
+    optionB: "不应该经常吵",
+  },
+  {
+    id: "q25",
+    question: "你认为恋爱中需要经常见面吗？",
+    optionA: "需要经常见",
+    optionB: "不需要经常见",
+  },
+  {
+    id: "q26",
+    question: "你觉得恋爱中应该经常发朋友圈吗？",
+    optionA: "应该经常发",
+    optionB: "不应该经常发",
+  },
+  {
+    id: "q27",
+    question: "你认为恋爱中需要经常视频通话吗？",
+    optionA: "需要",
+    optionB: "不需要",
+  },
+  {
+    id: "q28",
+    question: "你觉得恋爱中应该经常一起吃饭吗？",
+    optionA: "应该经常一起",
+    optionB: "不需要经常一起",
+  },
+  {
+    id: "q29",
+    question: "你认为恋爱中需要经常一起看电影吗？",
+    optionA: "需要",
+    optionB: "不需要",
+  },
+  {
+    id: "q30",
+    question: "你觉得恋爱中应该经常一起旅游吗？",
+    optionA: "应该经常一起",
+    optionB: "不需要经常一起",
+  },
 ];
 
 export default function AdminPage() {
@@ -268,6 +388,30 @@ export default function AdminPage() {
     }
   };
 
+  // const handleEndRound = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const response = await fetch(
+  //       `${process.env.NEXT_PUBLIC_API_BASE}/api/admin/end-round`,
+  //       {
+  //         method: "POST",
+  //       }
+  //     );
+  //     const data = await response.json();
+  //     console.log("结束轮次响应:", data);
+  //     if (response.ok) {
+  //       setGameState((prev) => ({ ...prev, status: "waiting" }));
+  //     }
+  //     else {
+  //       console.error("结束轮次失败:", data.error);
+  //     }
+  //   } catch (error) {
+  //     console.error("结束轮次错误:", error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleLogout = () => {
     signOut({ callbackUrl: "/" });
   };
@@ -342,6 +486,15 @@ export default function AdminPage() {
             </div>
 
             <div className="flex gap-2">
+              {/* <Button
+                onClick={handleEndRound}
+                disabled={loading}
+                variant="destructive"
+                className="h-9 px-4 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-lg font-medium transition-all duration-200 hover-lift text-sm"
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                结束轮次
+              </Button> */}
               <Button
                 onClick={handleResetGame}
                 disabled={loading}

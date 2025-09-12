@@ -118,8 +118,24 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     }
 
     if (isDisplay) {
+      console.log('Display reconnected');
       const remainingTime = gameManager.getCurrentTimeLeft();
       socket.emit('countdown_update', { timeLeft: remainingTime });
+
+      const winner = await redis.get(RedisKeys.gameWinner(roomId));
+      const tie = await redis.sMembers(RedisKeys.gameTie(roomId));
+
+      if (winner) {
+        console.log('Found winner, winner:', user.email);
+        socket.emit('winner', { 
+          winnerEmail: winner,
+        });
+      } else if (tie) {
+        console.log('Found tie, tie:', user.email);
+        socket.emit('tie', { 
+          finalists: tie,
+        });
+      }
     }
 
     // 断开连接处理

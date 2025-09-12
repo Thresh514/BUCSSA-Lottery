@@ -42,6 +42,10 @@ export class GameManager {
     return this.currentTimeLeft;
   }
 
+  // setCurrentTimeLeft(timeLeft: number): void {
+  //   this.currentTimeLeft = timeLeft;
+  // }
+
   // 获取游戏状态
   async getRoomState() {
     const roomId = process.env.DEFAULT_ROOM_ID!;
