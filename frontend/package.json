@@ -35,6 +35,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "artillery": "^2.0.21",
     "autoprefixer": "^10.4.17",
     "eslint": "^9",
     "eslint-config-next": "15.4.1",
