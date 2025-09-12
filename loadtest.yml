@@ -1,0 +1,25 @@
+config:
+  target: "ws://198.23.211.34:4000"
+  phases:
+    - duration: 60   # 测试 60 秒
+      arrivalRate: 20 # 每秒 20 个新连接
+scenarios:
+  - engine: socketio
+    flow:
+      - emit:
+          channel: "join"
+          data:
+            roomId: "default"
+      - think: 2
+      - emit:
+          channel: "answer"
+          data:
+            userEmail: "user_{{ $uuid }}@test.com"
+            answer: "A"
+      - think: 1
+      - on:
+          channel: "game_state"
+          then:
+            - log: "收到 game_state"
+
+# artillery run loadtest.yml
