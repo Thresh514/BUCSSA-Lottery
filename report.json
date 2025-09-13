@@ -1,0 +1,226 @@
+{
+  "aggregate": {
+    "counters": {
+      "vusers.created_by_name.0": 1200,
+      "vusers.created": 1200,
+      "errors.Error: 未提供邮箱": 1160,
+      "vusers.failed": 1200,
+      "errors.Error: timeout": 40
+    },
+    "rates": {},
+    "firstCounterAt": 1757707536119,
+    "lastCounterAt": 1757707659518,
+    "firstMetricAt": 1757707536119,
+    "lastMetricAt": 1757707659518,
+    "period": 1757707650000,
+    "summaries": {},
+    "histograms": {}
+  },
+  "intermediate": [
+    {
+      "counters": {
+        "vusers.created_by_name.0": 78,
+        "vusers.created": 78,
+        "errors.Error: 未提供邮箱": 73,
+        "vusers.failed": 73
+      },
+      "rates": {},
+      "firstCounterAt": 1757707536119,
+      "lastCounterAt": 1757707539990,
+      "firstMetricAt": 1757707536119,
+      "lastMetricAt": 1757707539990,
+      "period": "1757707530000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.0": 200,
+        "vusers.created": 200,
+        "errors.Error: 未提供邮箱": 187,
+        "vusers.failed": 187
+      },
+      "rates": {},
+      "firstCounterAt": 1757707540006,
+      "lastCounterAt": 1757707549989,
+      "firstMetricAt": 1757707540006,
+      "lastMetricAt": 1757707549989,
+      "period": "1757707540000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.0": 200,
+        "vusers.created": 200,
+        "errors.Error: 未提供邮箱": 177,
+        "vusers.failed": 178,
+        "errors.Error: timeout": 1
+      },
+      "rates": {},
+      "firstCounterAt": 1757707550034,
+      "lastCounterAt": 1757707559989,
+      "firstMetricAt": 1757707550034,
+      "lastMetricAt": 1757707559989,
+      "period": "1757707550000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "errors.Error: 未提供邮箱": 198,
+        "vusers.failed": 202,
+        "vusers.created_by_name.0": 200,
+        "vusers.created": 200,
+        "errors.Error: timeout": 4
+      },
+      "rates": {},
+      "firstCounterAt": 1757707560041,
+      "lastCounterAt": 1757707569994,
+      "firstMetricAt": 1757707560041,
+      "lastMetricAt": 1757707569994,
+      "period": "1757707560000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.0": 200,
+        "vusers.created": 200,
+        "errors.Error: 未提供邮箱": 187,
+        "vusers.failed": 194,
+        "errors.Error: timeout": 7
+      },
+      "rates": {},
+      "firstCounterAt": 1757707570007,
+      "lastCounterAt": 1757707579997,
+      "firstMetricAt": 1757707570007,
+      "lastMetricAt": 1757707579997,
+      "period": "1757707570000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.0": 200,
+        "vusers.created": 200,
+        "errors.Error: 未提供邮箱": 190,
+        "vusers.failed": 197,
+        "errors.Error: timeout": 7
+      },
+      "rates": {},
+      "firstCounterAt": 1757707580041,
+      "lastCounterAt": 1757707589989,
+      "firstMetricAt": 1757707580041,
+      "lastMetricAt": 1757707589989,
+      "period": "1757707580000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.0": 122,
+        "vusers.created": 122,
+        "errors.Error: 未提供邮箱": 114,
+        "vusers.failed": 120,
+        "errors.Error: timeout": 6
+      },
+      "rates": {},
+      "firstCounterAt": 1757707590033,
+      "lastCounterAt": 1757707599977,
+      "firstMetricAt": 1757707590033,
+      "lastMetricAt": 1757707599977,
+      "period": "1757707590000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "errors.Error: 未提供邮箱": 7,
+        "vusers.failed": 15,
+        "errors.Error: timeout": 8
+      },
+      "rates": {},
+      "firstCounterAt": 1757707602847,
+      "lastCounterAt": 1757707609889,
+      "firstMetricAt": 1757707602847,
+      "lastMetricAt": 1757707609889,
+      "period": "1757707600000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "errors.Error: timeout": 5,
+        "vusers.failed": 17,
+        "errors.Error: 未提供邮箱": 12
+      },
+      "rates": {},
+      "firstCounterAt": 1757707610453,
+      "lastCounterAt": 1757707617838,
+      "firstMetricAt": 1757707610453,
+      "lastMetricAt": 1757707617838,
+      "period": "1757707610000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "errors.Error: 未提供邮箱": 9,
+        "vusers.failed": 9
+      },
+      "rates": {},
+      "firstCounterAt": 1757707620443,
+      "lastCounterAt": 1757707629294,
+      "firstMetricAt": 1757707620443,
+      "lastMetricAt": 1757707629294,
+      "period": "1757707620000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "errors.Error: 未提供邮箱": 3,
+        "vusers.failed": 3
+      },
+      "rates": {},
+      "firstCounterAt": 1757707638227,
+      "lastCounterAt": 1757707639675,
+      "firstMetricAt": 1757707638227,
+      "lastMetricAt": 1757707639675,
+      "period": "1757707630000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "errors.Error: 未提供邮箱": 2,
+        "vusers.failed": 3,
+        "errors.Error: timeout": 1
+      },
+      "rates": {},
+      "firstCounterAt": 1757707641322,
+      "lastCounterAt": 1757707644386,
+      "firstMetricAt": 1757707641322,
+      "lastMetricAt": 1757707644386,
+      "period": "1757707640000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "errors.Error: 未提供邮箱": 1,
+        "vusers.failed": 2,
+        "errors.Error: timeout": 1
+      },
+      "rates": {},
+      "firstCounterAt": 1757707651708,
+      "lastCounterAt": 1757707659518,
+      "firstMetricAt": 1757707651708,
+      "lastMetricAt": 1757707659518,
+      "period": "1757707650000",
+      "summaries": {},
+      "histograms": {}
+    }
+  ]
+}

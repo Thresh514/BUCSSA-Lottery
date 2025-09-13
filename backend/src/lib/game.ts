@@ -124,11 +124,14 @@ export class GameManager {
         startTime: question.startTime,
       };
       roomState = { ...roomState, "currentQuestion": questionData };
-      const gameState = { ...roomState, "userAnswer": null, "roundResult": null };
+
+      await this.startCountdown();
+      
+      const gameState = { ...roomState, "userAnswer": null, "roundResult": null, "timeLeft": this.getCurrentTimeLeft() };
       
       this.io.to(this.roomId).emit('new_question', gameState );
       // 启动倒计时
-      this.startCountdown();
+      
     } else {
       console.log(`❌ Socket.IO instance is null, cannot emit new_question`);
     }

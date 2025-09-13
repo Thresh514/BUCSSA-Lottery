@@ -1,14 +1,16 @@
 config:
   target: "ws://198.23.211.34:4000"
   phases:
-    - duration: 60 # 测试 60 秒
-      arrivalRate: 20 # 每秒 20 个新连接
+    - duration: 60
+      arrivalRate: 20
+
 scenarios:
   - engine: socketio
     flow:
+      - function: "setEmail"
       - connect:
           auth:
-            email: "user_{{ $uuid }}@gmail.com"
+            email: "{{ email }}"
       - emit:
           channel: "join"
           data:
@@ -23,4 +25,13 @@ scenarios:
           channel: "game_state"
           then:
             - log: "收到 game_state"
-# artillery run loadtest.yml
+
+processor:
+  functions:
+    setEmail: |
+      function (userContext, events, done) {
+        const uuid = Math.random().toString(36).substring(2, 10);
+        userContext.vars.email = `user_${uuid}@gmail.com`;
+        events.log(`Using email: ${userContext.vars.email}`);
+        return done();
+      }
