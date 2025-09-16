@@ -332,6 +332,7 @@ export default function AdminPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.user.accessToken}`,
           },
           body: JSON.stringify(questionData),
         }
@@ -363,6 +364,10 @@ export default function AdminPage() {
         `${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reset-game`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.user.accessToken}`,
+          },
         }
       );
 

@@ -18,8 +18,6 @@ router.post('/', async (req, res) => {
     const isAdmin = decoded?.isAdmin;
     const isDisplay = decoded?.isDisplay;
 
-    console.log('提交答案请求:', { userEmail, isAdmin, isDisplay, answer });
-
     // 验证用户邮箱
     if (!userEmail) {
       return res.status(401).json({ error: '请先登录' });

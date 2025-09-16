@@ -1,5 +1,7 @@
 import express from 'express';
 import { getGameManager } from '../lib/game.js';
+import jwt from 'jsonwebtoken';
+import { JWTPayload } from '../types/index.js';
 
 const router = express.Router();
 
@@ -30,6 +32,24 @@ const router = express.Router();
 router.post('/next-question', async (req, res) => {
   try {
     const { question, optionA, optionB } = req.body;
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    const decoded = token ? jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload : null;
+
+    const userEmail = decoded?.email;
+    const isAdmin = decoded?.isAdmin;
+    const isDisplay = decoded?.isDisplay;
+
+    // 验证用户邮箱
+    if (!userEmail) {
+      return res.status(401).json({ error: '请先登录' });
+    }
+
+    // 验证用户身份
+    if (!isAdmin || isDisplay) {
+      return res.status(401).json({ error: '无权访问' });
+    }
 
     const gameManager = getGameManager();
 
@@ -68,6 +88,26 @@ router.post('/next-question', async (req, res) => {
 // 重置游戏
 router.post('/reset-game', async (req, res) => {
   try {
+    const { question, optionA, optionB } = req.body;
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    const decoded = token ? jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload : null;
+
+    const userEmail = decoded?.email;
+    const isAdmin = decoded?.isAdmin;
+    const isDisplay = decoded?.isDisplay;
+
+    // 验证用户邮箱
+    if (!userEmail) {
+      return res.status(401).json({ error: '请先登录' });
+    }
+
+    // 验证用户身份
+    if (!isAdmin || isDisplay) {
+      return res.status(401).json({ error: '无权访问' });
+    }
+
     const gameManager = getGameManager();
     await gameManager.resetGame();
     await gameManager.setGameStartState(false);
