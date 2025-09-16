@@ -1,6 +1,5 @@
 import express from 'express';
 import { getGameManager } from '../lib/game.js';
-import { MinorityQuestion } from '../types/index.js';
 
 const router = express.Router();
 
@@ -44,7 +43,7 @@ router.post('/next-question', async (req, res) => {
     }
     
     // 创建少数派题目
-    const minorityQuestion: MinorityQuestion = {
+    const minorityQuestion = {
       id: `q_${Date.now()}`,
       question,
       optionA,

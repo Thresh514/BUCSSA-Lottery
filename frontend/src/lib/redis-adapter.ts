@@ -40,7 +40,7 @@ async function getUser(id: string): Promise<AdapterUser | null> {
     const user = await redis.get(`nextauth:user:${id}`);
     if (user) {
       const userData = JSON.parse(user);
-      console.log("👤 Retrieved user:", { id, email: userData.email, hasAccounts: !!userData.accounts });
+      // console.log("👤 Retrieved user:", { id, email: userData.email, hasAccounts: !!userData.accounts });
       return userData;
     }
     return null;
@@ -92,7 +92,7 @@ export const RedisAdapter: Adapter & {
     // ✅ 初始化 accounts 数组，确保 linkAccount 能正常工作
     const user = { ...data, id, accounts: [] };
     
-    console.log("👤 Creating user:", { id, email: user.email, accounts: user.accounts });
+    // console.log("👤 Creating user:", { id, email: user.email, accounts: user.accounts });
     
     await redis.set(`nextauth:user:${id}`, JSON.stringify(user));
     // 建立邮箱到userId的索引，便于快速查找
@@ -132,18 +132,18 @@ export const RedisAdapter: Adapter & {
 
   // 通过账户获取用户
   async getUserByAccount(providerAccountId: { provider: string; providerAccountId: string }): Promise<AdapterUser | null> {
-    console.log("🔍 getUserByAccount checking:", providerAccountId);
+    // console.log("🔍 getUserByAccount checking:", providerAccountId);
     
     const redis = await getRedisClient();
     const keys = await redis.keys("nextauth:user:*");
-    console.log("🔍 Found user keys:", keys.length);
+    // console.log("🔍 Found user keys:", keys.length);
     
     for (const key of keys) {
       const user = await redis.get(key);
       if (user) {
         try {
           const userData = JSON.parse(user);
-          console.log("🔍 Checking user:", { id: userData.id, email: userData.email, hasAccounts: !!userData.accounts, accountsCount: userData.accounts?.length || 0 });
+          // console.log("🔍 Checking user:", { id: userData.id, email: userData.email, hasAccounts: !!userData.accounts, accountsCount: userData.accounts?.length || 0 });
           
           if (userData.accounts && Array.isArray(userData.accounts)) {
             const account = userData.accounts.find(
@@ -152,11 +152,11 @@ export const RedisAdapter: Adapter & {
                 acc.providerAccountId === providerAccountId.providerAccountId
             );
             if (account) {
-              console.log("✅ Found matching account for user:", userData.id);
+              // console.log("✅ Found matching account for user:", userData.id);
               return userData as AdapterUser;
             }
           } else {
-            console.log("⚠️ User has no accounts array:", userData.id);
+            // console.log("⚠️ User has no accounts array:", userData.id);
           }
         } catch (error) {
           console.error("❌ Error parsing user data:", error, "Key:", key);
@@ -164,7 +164,7 @@ export const RedisAdapter: Adapter & {
       }
     }
     
-    console.log("❌ No user found for account:", providerAccountId);
+    // console.log("❌ No user found for account:", providerAccountId);
     return null;
   },
 
@@ -180,7 +180,7 @@ export const RedisAdapter: Adapter & {
       accounts: (user as any).accounts || [] // 使用类型断言避免 TypeScript 错误
     };
     
-    console.log("🔄 Updating user:", { id: data.id, accountsCount: updatedUser.accounts?.length || 0 });
+    // console.log("🔄 Updating user:", { id: data.id, accountsCount: updatedUser.accounts?.length || 0 });
     
     const redis = await getRedisClient();
     await redis.set(`nextauth:user:${data.id}`, JSON.stringify(updatedUser));
@@ -215,7 +215,7 @@ export const RedisAdapter: Adapter & {
     accounts.push(data);
     const updatedUser = { ...userWithAccounts, accounts };
     
-    console.log("🔗 Updated user accounts:", { userId: data.userId, accountsCount: accounts.length });
+    // console.log("🔗 Updated user accounts:", { userId: data.userId, accountsCount: accounts.length });
     
     const redis = await getRedisClient();
     await redis.set(`nextauth:user:${data.userId}`, JSON.stringify(updatedUser));

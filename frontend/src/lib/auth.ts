@@ -1,6 +1,7 @@
 import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { RedisAdapter } from "./redis-adapter";
+import jwt from 'jsonwebtoken';
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -53,6 +54,9 @@ export const authOptions: AuthOptions = {
           const isDisplay = await RedisAdapter.isDisplayEmail(user.email || "");
           token.isAdmin = isAdmin;
           token.isDisplay = isDisplay;
+
+          const accessToken = jwt.sign({ email: user.email, isAdmin: isAdmin, isDisplay: isDisplay, id: token.id }, process.env.JWT_SECRET!, { expiresIn: '30d', issuer: 'lottery-frontend', audience: 'lottery-backend' });
+          token.accessToken = accessToken;
           
           // console.log("👑 Role check result:", { email: user.email, isAdmin, isDisplay });
 
@@ -62,6 +66,7 @@ export const authOptions: AuthOptions = {
           // Don't fail the whole authentication - set defaults
           token.isAdmin = false;
           token.isDisplay = false;
+          token.accessToken = null;
         }
       }
 
@@ -84,6 +89,7 @@ export const authOptions: AuthOptions = {
         session.user.id = String(token.sub || token.id || "");
         session.user.isAdmin = Boolean(token.isAdmin);
         session.user.isDisplay = Boolean(token.isDisplay);
+        session.user.accessToken = String(token.accessToken) || null;
       }
 
       // console.log("📱 Session callback complete:", session.user);

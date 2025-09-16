@@ -1,4 +1,3 @@
-import { start } from 'repl';
 import { redis, RedisKeys } from './redis.js';
 import { getSocketIO } from './socket.js';
 
@@ -307,12 +306,14 @@ export class GameManager {
     const roomState = await this.getRoomState();
     if (this.io) {
       if (winner) {
+        console.log(`Winner is ${winner}`);
         this.io.to(this.roomId).emit('winner', { winnerEmail: winner });
         this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
       }
       if (tier) {
-        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
+        console.log(`Game ended in a tie between: ${tier.join(', ')}`);
         this.io.to(this.roomId).emit('tie', { finalists: tier });
+        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
       }
     }
   }

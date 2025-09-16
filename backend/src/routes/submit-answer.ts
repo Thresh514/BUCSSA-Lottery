@@ -1,16 +1,33 @@
 import express from 'express';
 import { getGameManager } from '../lib/game.js';
+import jwt from 'jsonwebtoken';
+import { JWTPayload } from '../types/index.js';
 
 const router = express.Router();
 
 
 router.post('/', async (req, res) => {
   try {
-    const { answer, userEmail } = req.body;
+    const { answer } = req.body;
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    const decoded = token ? jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload : null;
+
+    const userEmail = decoded?.email;
+    const isAdmin = decoded?.isAdmin;
+    const isDisplay = decoded?.isDisplay;
+
+    console.log('提交答案请求:', { userEmail, isAdmin, isDisplay, answer });
 
     // 验证用户邮箱
     if (!userEmail) {
       return res.status(401).json({ error: '请先登录' });
+    }
+
+    // 验证用户身份
+    if (isAdmin || isDisplay) {
+      return res.status(401).json({ error: '无权访问' });
     }
 
     // 验证答案格式

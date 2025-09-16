@@ -49,7 +49,7 @@ export default withAuth(
 
         // Require authentication for protected routes
         if (pathname.startsWith('/admin') || pathname.startsWith('/play') || pathname.startsWith('/show')) {
-          return !!token
+          return !!token?.accessToken
         }
 
         return true

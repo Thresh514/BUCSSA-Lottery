@@ -3,16 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Box } from "@/components/ui/box";
-import {
-  GlassText,
-  GlassTitle,
-  TimeText,
-  DateText,
-} from "@/components/ui/glass-text";
 import Confetti from "react-confetti";
 import BattleEffect from "@/components/ui/battle-effect";
-import { formatTime } from "@/lib/utils";
 import { io, Socket } from "socket.io-client";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -22,13 +14,9 @@ import {
   Wifi,
   WifiOff,
   LogOut,
-  Target,
   User,
   CheckCircle,
-  AlertCircle,
   Crown,
-  TrendingUp,
-  TrendingDown,
 } from "lucide-react";
 import { GameState } from "@/types";
 import Image from "next/image";
@@ -79,7 +67,7 @@ export default function PlayPage() {
       router.push("/show");
       return;
     }
-  }, [status, session]);
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -164,25 +152,6 @@ export default function PlayPage() {
       }
     });
 
-    // socket.on("game_end", (data: GameEnded) => {
-    //   setGameState((prev) => ({ ...prev, status: "ended" }));
-    //   if (data.winnerEmail === session.user?.email) {
-    //     setIsWinner(true);
-    //   } else if (
-    //     data.tie &&
-    //     data.finalists.includes(session.user?.email || "")
-    //   ) {
-    //     setIsTie(true);
-    //     `平局，是${data.finalists.join(", ")}进入决赛圈`;
-    //   } else if (data.winnerEmail) {
-    //     setIsEliminated(true);
-    //     `游戏结束！获胜者是 ${data.winnerEmail}`;
-    //   } else {
-    //     setIsEliminated(true);
-    //     ("游戏结束！");
-    //   }
-    // });
-
     socket.on("error", (data: any) => {
       console.error("Socket 错误:", data);
       data.message;
@@ -191,24 +160,24 @@ export default function PlayPage() {
     return () => {
       socket.disconnect();
     };
-  }, [router, gameState.eliminatedCount, session, status]);
+  }, [session]);
 
   const handleSubmitAnswer = async (option: "A" | "B") => {
     if (!gameState.currentQuestion || isEliminated || selectedOption) return;
 
-    setSelectedOption(option);
-
     try {
+      setSelectedOption(option);
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE}/api/submit-answer`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.user?.accessToken || ""}`,
           },
           body: JSON.stringify({
             answer: option,
-            userEmail: session?.user?.email,
           }),
         }
       );

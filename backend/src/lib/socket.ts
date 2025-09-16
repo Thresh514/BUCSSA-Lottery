@@ -2,7 +2,6 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { redis, RedisKeys } from './redis.js';
 import { getGameManager } from './game.js';
-import { GameState } from '../types/index.js';
 
 
 // 全局Socket.IO服务器实例
@@ -118,7 +117,6 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     }
 
     if (isDisplay) {
-      console.log('Display reconnected');
       const remainingTime = gameManager.getCurrentTimeLeft();
       socket.emit('countdown_update', { timeLeft: remainingTime });
 
