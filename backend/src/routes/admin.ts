@@ -9,10 +9,10 @@ const router = express.Router();
 // router.get('/game-stats', async (req, res) => {
 //   try {
 //     const gameManager = getGameManager();
-    
+
 //     // 获取游戏统计信息
 //     const gameStats = await gameManager.getGameStats();
-    
+
 //     // 获取当前轮次统计（如果有进行中的轮次）
 //     const roundStats = await gameManager.getRoundStats();
 
@@ -61,7 +61,7 @@ router.post('/next-question', async (req, res) => {
     if (!question || !optionA || !optionB) {
       return res.status(400).json({ error: '请提供题目内容和两个选项' });
     }
-    
+
     // 创建少数派题目
     const minorityQuestion = {
       id: `q_${Date.now()}`,
@@ -75,7 +75,7 @@ router.post('/next-question', async (req, res) => {
     await gameManager.startNewRound(minorityQuestion);
     await gameManager.setGameStartState(true);
 
-    return res.status(200).json({ 
+    return res.status(200).json({
       message: '新题目已发布',
       question: minorityQuestion
     });
@@ -88,11 +88,11 @@ router.post('/next-question', async (req, res) => {
 // 重置游戏
 router.post('/reset-game', async (req, res) => {
   try {
-    const { question, optionA, optionB } = req.body;
-
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
     const decoded = token ? jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload : null;
+
+    console.log(authHeader, token, decoded);
 
     const userEmail = decoded?.email;
     const isAdmin = decoded?.isAdmin;

@@ -342,7 +342,8 @@ export class GameManager {
       }
     }
 
-    const userAccounts = await redis.sMembers(RedisKeys.userSession('*'));
+    const userAccounts = await redis.keys(RedisKeys.userSession('*'));
+    console.log(`User accounts to reset: ${userAccounts.length}`);
     if (userAccounts.length > 0) {
       for (const key of userAccounts) {
         await redis.del(key);
