@@ -10,13 +10,13 @@ export default function Navbar() {
       <nav className="bg-transparent fixed top-0 left-0 right-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
                 <Image 
                   src="/bucssalogo.png" 
                   alt="logo" 
                   width={60} 
                   height={60} 
-                  className="grayscale contrast-200"
+                  className="hidden md:block"
                 />
                 <div className="text-3xl hidden md:block tracking-wider text-gray-200">BUCSSA</div>
               </div>
@@ -24,7 +24,7 @@ export default function Navbar() {
               {/* QR码按钮 */}
               <button
                 onClick={() => setShowQRCode(true)}
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200 border border-white/20 hover:border-white/30"
+                className="hidden md:block p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200 border border-white/20 hover:border-white/30"
                 title="显示二维码"
               >
                 <QrCode className="w-6 h-6" />
