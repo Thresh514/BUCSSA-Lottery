@@ -85,18 +85,17 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       socket.emit("game_state", gameState);
     } else {
       if (isWinner) {
-        socket.emit('winner', { 
-          userId: user.email,
-          message: '恭喜您获得第一名！' 
+        socket.emit('winner', {
+          winnerEmail: user.email,
         });
         socket.emit("game_state", { ...roomState, userAnswer: null });
       } else if (isTie) {
-        socket.emit('tie', { 
+        socket.emit('tie', {
           finalists: [user.email],
         });
         socket.emit("game_state", { ...roomState, userAnswer: null });
       } else if (isEliminated) {
-        socket.emit('eliminated', { 
+        socket.emit('eliminated', {
           "eliminated": [user.email],
         });
         socket.emit("game_state", { ...roomState, userAnswer: null });
@@ -120,12 +119,12 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
       if (winner) {
         console.log('Found winner, winner:', user.email);
-        socket.emit('winner', { 
+        socket.emit('winner', {
           winnerEmail: winner,
         });
       } else if (tie) {
         console.log('Found tie, tie:', user.email);
-        socket.emit('tie', { 
+        socket.emit('tie', {
           finalists: tie,
         });
       }
@@ -140,7 +139,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       }
       gameManager.emitPlayerCountUpdate();
     });
-    
+
     socket.on('submit_answer', async (data) => {
       console.log(`🎯 [提交答案] 收到答案提交请求`, {
         socketId: socket.id,
@@ -194,7 +193,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
           timestamp: new Date().toISOString()
         });
 
-        socket.emit('answer_submitted', { 
+        socket.emit('answer_submitted', {
           message: '答案已提交',
           answer
         });
@@ -205,7 +204,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
 
         const roomState = await gameManager.getRoomState();
         const questionId = roomState.currentQuestion?.id;
-        
+
         console.log(`🔍 [提交答案] 当前游戏状态`, {
           userEmail: user.email,
           questionId: questionId,
@@ -227,7 +226,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
             ...roomState,
             userAnswer: userAnswer || null,
           };
-          
+
           socket.emit('game_state', gameState);
           console.log(`📤 [提交答案] 已发送游戏状态更新给用户`, {
             userEmail: user.email,
@@ -263,7 +262,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
           stack: error.stack,
           timestamp: new Date().toISOString()
         });
-        
+
         if (error.message === '没有进行中的游戏') {
           console.log(`🚫 [提交答案] 没有进行中的游戏`, {
             userEmail: socket.data.user?.email

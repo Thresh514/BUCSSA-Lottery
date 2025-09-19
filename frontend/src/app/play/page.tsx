@@ -140,7 +140,8 @@ export default function PlayPage() {
     });
 
     socket.on("winner", (data: any) => {
-      if (data.userId === session.user?.email) {
+      console.log("winner event data:", data);
+      if (data.winnerEmail === session.user?.email) {
         setIsWinner(true);
       }
     });
