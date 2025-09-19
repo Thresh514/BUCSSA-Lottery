@@ -20,15 +20,15 @@ export const authOptions: AuthOptions = {
       // 只允许 bu.edu 和 gmail.com 的邮箱
       // console.log("🔐 signIn callback triggered:", { email: user.email, id: user.id });
 
-      const userEmail = user.email || "";
-      const allowed = userEmail.endsWith("@bu.edu") || userEmail.endsWith("@gmail.com");
+      // const userEmail = user.email || "";
+      // const allowed = userEmail.endsWith("@bu.edu") || userEmail.endsWith("@gmail.com");
 
       // console.log("✅ Email check result:", { email: userEmail, allowed });
       
-      if (!allowed) {
-        // console.log("❌ Email not allowed, blocking sign in");
-        return false;
-      }
+      // if (!allowed) {
+      //   console.log("❌ Email not allowed, blocking sign in");
+      //   return false;
+      // }
 
       // 简化：只检查邮箱格式，管理员检查在 JWT 回调中进行
       // console.log("✅ Email allowed, proceeding with authentication");

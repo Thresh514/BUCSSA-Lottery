@@ -85,13 +85,8 @@ export default function LoginPage() {
                   height={20}
                   className="mr-2"
                 />
-                使用 Google 账户登录
+                一键登录
               </Button>
-
-              {/* 提示信息 */}
-              <GlassText variant="muted" size="sm">
-                仅支持 Gmail 邮箱登录
-              </GlassText>
             </div>
           </motion.div>
         </div>

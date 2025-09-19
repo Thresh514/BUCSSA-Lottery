@@ -28,11 +28,6 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         return next(new Error('未提供邮箱'));
       }
 
-      // 验证邮箱域名
-      if (!email.endsWith('@bu.edu') && !email.endsWith('@gmail.com')) {
-        return next(new Error('不支持的邮箱域名'));
-      }
-
       socket.data.user = {
         email,
       };
