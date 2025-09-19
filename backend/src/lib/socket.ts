@@ -145,6 +145,149 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       }
       gameManager.emitPlayerCountUpdate();
     });
+    
+    socket.on('submit_answer', async (data) => {
+      console.log(`🎯 [提交答案] 收到答案提交请求`, {
+        socketId: socket.id,
+        userEmail: socket.data.user?.email,
+        data: data,
+        timestamp: new Date().toISOString()
+      });
+
+      try {
+        const { answer } = data;
+        const user = socket.data.user;
+
+        console.log(`📝 [提交答案] 开始处理答案提交`, {
+          userEmail: user?.email,
+          answer: answer,
+          isAdmin: isAdmin,
+          isDisplay: isDisplay,
+          roomId: roomId
+        });
+
+        if (isAdmin || isDisplay) {
+          console.log(`❌ [提交答案] 管理员或展示用户尝试提交答案`, {
+            userEmail: user?.email,
+            isAdmin: isAdmin,
+            isDisplay: isDisplay
+          });
+          socket.emit('answer_error', { error: '无权访问' });
+          return;
+        }
+
+        if (!answer || !['A', 'B'].includes(answer)) {
+          console.log(`❌ [提交答案] 答案格式无效`, {
+            userEmail: user?.email,
+            receivedAnswer: answer,
+            validAnswers: ['A', 'B']
+          });
+          socket.emit('answer_error', { error: '请选择A或B选项' });
+          return;
+        }
+
+        console.log(`✅ [提交答案] 答案格式验证通过，开始提交到GameManager`, {
+          userEmail: user.email,
+          answer: answer
+        });
+
+        await gameManager.submitAnswer(user.email, answer);
+
+        console.log(`🎉 [提交答案] 答案提交成功`, {
+          userEmail: user.email,
+          answer: answer,
+          timestamp: new Date().toISOString()
+        });
+
+        socket.emit('answer_submitted', { 
+          message: '答案已提交',
+          answer
+        });
+
+        console.log(`📊 [提交答案] 获取更新后的游戏状态`, {
+          userEmail: user.email
+        });
+
+        const roomState = await gameManager.getRoomState();
+        const questionId = roomState.currentQuestion?.id;
+        
+        console.log(`🔍 [提交答案] 当前游戏状态`, {
+          userEmail: user.email,
+          questionId: questionId,
+          gameStatus: roomState.status,
+          round: roomState.round,
+          timeLeft: roomState.timeLeft,
+          survivorsCount: roomState.survivorsCount
+        });
+
+        if (questionId) {
+          const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
+          console.log(`💾 [提交答案] 从Redis获取用户答案`, {
+            userEmail: user.email,
+            questionId: questionId,
+            storedAnswer: userAnswer
+          });
+
+          const gameState = {
+            ...roomState,
+            userAnswer: userAnswer || null,
+          };
+          
+          socket.emit('game_state', gameState);
+          console.log(`📤 [提交答案] 已发送游戏状态更新给用户`, {
+            userEmail: user.email,
+            gameState: {
+              status: gameState.status,
+              round: gameState.round,
+              userAnswer: gameState.userAnswer,
+              timeLeft: gameState.timeLeft
+            }
+          });
+        } else {
+          console.log(`⚠️  [提交答案] 当前没有有效的题目ID`, {
+            userEmail: user.email,
+            roomState: roomState
+          });
+        }
+
+        // 获取当前答案统计并记录
+        const currentAnswers = await redis.hGetAll(RedisKeys.gameAnswers(roomId));
+        console.log(`📈 [提交答案] 当前答案统计`, {
+          userEmail: user.email,
+          answerCounts: {
+            A: currentAnswers.A || '0',
+            B: currentAnswers.B || '0'
+          },
+          totalAnswers: (parseInt(currentAnswers.A || '0') + parseInt(currentAnswers.B || '0'))
+        });
+
+      } catch (error: any) {
+        console.error(`💥 [提交答案] 处理答案提交时发生错误`, {
+          userEmail: socket.data.user?.email,
+          error: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        });
+        
+        if (error.message === '没有进行中的游戏') {
+          console.log(`🚫 [提交答案] 没有进行中的游戏`, {
+            userEmail: socket.data.user?.email
+          });
+          socket.emit('answer_error', { error: '当前没有进行中的游戏' });
+        } else if (error.message === '您已被淘汰') {
+          console.log(`☠️  [提交答案] 用户已被淘汰`, {
+            userEmail: socket.data.user?.email
+          });
+          socket.emit('answer_error', { error: '您已被淘汰，无法继续答题' });
+        } else {
+          console.log(`🔥 [提交答案] 服务器内部错误`, {
+            userEmail: socket.data.user?.email,
+            errorMessage: error.message
+          });
+          socket.emit('answer_error', { error: '服务器内部错误' });
+        }
+      }
+    });
   });
 
   return io;
