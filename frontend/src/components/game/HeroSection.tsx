@@ -56,7 +56,7 @@ const HeroSection = ({
             className="text-5xl md:text-8xl tracking-wide md:tracking-wider font-normal"
             variant="primary"
           >
-            文化节抽奖
+            BUCSSA 文化节抽奖
           </GlassText>
           <Button variant="outline" size="xl" onClick={onStartGame}>
             开始答题, 豪取大奖吧！
