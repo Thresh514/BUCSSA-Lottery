@@ -373,6 +373,10 @@ export default function PlayPage() {
                 第 {gameState.round} 轮
               </div>
 
+              <div className="flex items-center px-4 py-2 bg-gradient-primary text-gray-800 rounded-full text-3xl font-bold tracking-wider">
+                {gameState.currentQuestion.question}
+              </div>
+
               <div className="flex flex-col items-center gap-4 justify-center">
                 <Button
                   onClick={() => handleSubmitAnswer("A")}
