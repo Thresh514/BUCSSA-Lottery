@@ -140,16 +140,16 @@ export class GameManager {
   private async startCountdown(): Promise<void> {
     const survivorsCount = await redis.sCard(RedisKeys.roomSurvivors(this.roomId));
 
-    let timeLeft: number;
-    if (survivorsCount <= 40) {
-      timeLeft = 15;
-    } else if (survivorsCount <= 75) {
-      timeLeft = 20;
-    } else if (survivorsCount <= 150) {
-      timeLeft = 30;
-    } else {
-      timeLeft = 40;
-    }
+    let timeLeft = 20;
+    // if (survivorsCount <= 40) {
+    //   timeLeft = 15;
+    // } else if (survivorsCount <= 75) {
+    //   timeLeft = 20;
+    // } else if (survivorsCount <= 150) {
+    //   timeLeft = 30;
+    // } else {
+    //   timeLeft = 40;
+    // }
 
     this.currentTimeLeft = timeLeft;
 
