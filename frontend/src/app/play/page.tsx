@@ -119,6 +119,7 @@ export default function PlayPage() {
       setIsWinner(false);
       setIsTie(false);
       setIsEliminated(false);
+      handleLogout();
     });
 
     socket.on("new_question", (data: GameState) => {
