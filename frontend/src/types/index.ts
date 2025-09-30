@@ -41,14 +41,17 @@ export interface RoundResult {
   answers: { A: number; B: number };
 }
 
+// not used at the moment
 export interface hasWinner {
   winnerEmail: string | null;
 }
 
+// not used at the moment
 export interface hasTie {
   finalists: string[] | null;
 }
 
+// not used at the moment
 export interface Eliminated {
   userId: string;
 }
