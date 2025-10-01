@@ -40,7 +40,7 @@ export default function Navbar() {
             <div className="text-center space-y-4">
               <div className="w-96 h-96 bg-white rounded-lg flex items-center justify-center mx-auto">
                 <div className="text-white text-center p-4">
-                  <Image src="/qrcode.webp" alt="qrcode" width={400} height={400} />
+                  <Image src="/qrcode.png" alt="qrcode" width={400} height={400} />
                 </div>
               </div>
               <p className="text-white text-center text-2xl font-bold">lottery.bucssa.org</p>

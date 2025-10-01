@@ -68,18 +68,20 @@ const BarItem: React.FC<{
 
       {/* 柱状图容器 */}
       <div className="relative h-8 bg-gray-200 rounded-full overflow-hidden">
-        <animated.div
-          className="h-full rounded-full flex items-center justify-end pr-4"
-          style={{
-            backgroundColor: item.bgColor,
-            border: `2px solid ${item.borderColor}`,
-            ...barAnimation
-          }}
-        >
-          <span className="text-sm font-bold" style={{ color: item.color }}>
-            {safeValue}
-          </span>
-        </animated.div>
+        {safeValue > 0 && (
+          <animated.div
+            className="h-full rounded-full flex items-center justify-end pr-4"
+            style={{
+              backgroundColor: item.bgColor,
+              border: `2px solid ${item.borderColor}`,
+              ...barAnimation
+            }}
+          >
+            <span className="text-sm font-bold" style={{ color: item.color }}>
+              {safeValue}
+            </span>
+          </animated.div>
+        )}
       </div>
     </motion.div>
   );
