@@ -121,10 +121,9 @@ export default function ShowPage() {
     socket.on("game_start", (data: GameState) => {
       console.log("📺 Received game_start:", data);
       setGameState(data);
-    });
-
-    socket.on("game_reset", (data: GameState) => {
-      setGameState(data);
+      setWinner(null);
+      setTie(null);
+      setUpdatedWinnerTie(true);
     });
 
     socket.on("game_state", (data: GameState) => {
@@ -565,7 +564,7 @@ export default function ShowPage() {
             <div className="text-center space-y-4">
               <div className="w-96 h-96 bg-white rounded-lg flex items-center justify-center mx-auto">
                 <div className="text-white text-center p-4">
-                  <Image src="/qrcode.webp" alt="qrcode" width={400} height={400} />
+                  <Image src="/qrcode.png" alt="qrcode" width={400} height={400} />
                 </div>
               </div>
               <p className="text-white text-center text-2xl font-bold">lottery.bucssa.org</p>
@@ -582,7 +581,7 @@ export default function ShowPage() {
       )}
 
         {/* Debug Section */}
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        {/* <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="bg-black/20 backdrop-blur-sm border border-yellow-400/50 rounded-lg p-4 mb-4">
             <h3 className="text-yellow-400 font-bold text-lg mb-3">
               🐛 Debug Info
@@ -656,7 +655,7 @@ export default function ShowPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
           {/* 游戏统计面板 */}
@@ -990,7 +989,7 @@ export default function ShowPage() {
                   </div>
 
                   {/* 结果统计柱状图 */}
-                  <div>
+                  {/* <div>
                     <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">
                       结果统计
                     </h3>
@@ -1052,7 +1051,7 @@ export default function ShowPage() {
                       })()}
                       duration={2.5}
                     />
-                  </div>
+                  </div> */}
                 </div>
               </motion.div>
             )}
