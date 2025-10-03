@@ -8,8 +8,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Box } from "@/components/ui/box";
-import { GlassText, GlassTitle } from "@/components/ui/glass-text";
 import BackgroundImage from "@/components/game/BackgroundImage";
 
 export default function LoginPage() {
@@ -33,20 +31,15 @@ export default function LoginPage() {
   }, [session, status, router]);
 
   const handleGoogleSignIn = async () => {
-    // 移除硬编码的 callbackUrl，让 NextAuth 根据用户身份自动重定向
     await signIn("google");
+  };
+
+  const handleAzureADSignIn = async () => {
+    await signIn("azure-ad");
   };
 
   return (
     <>
-      {/* 背景图片 */}
-      <BackgroundImage
-        imageUrl="bgnb.jpg" // 在这里设置你的背景图片路径
-        overlayOpacity={0.05} // 整体遮罩透明度，0-1之间
-        centerMask={true} // 启用中间渐变蒙版
-        maskWidth={90} // 中间蒙版宽度，80%的屏幕宽度
-      />
-
       <div className="min-h-screen flex flex-col">
         {/* 返回首页 */}
         <div className="p-4">
@@ -85,7 +78,22 @@ export default function LoginPage() {
                   height={20}
                   className="mr-2"
                 />
-                一键登录
+                Google 登录
+              </Button>
+
+              <Button
+                onClick={handleAzureADSignIn}
+                size="lg"
+                className="w-full mb-6"
+              >
+                <Image
+                  src="/outlook.png"
+                  alt="Azure"
+                  width={20}
+                  height={20}
+                  className="mr-2"
+                />
+                Outlook 登录
               </Button>
             </div>
           </motion.div>

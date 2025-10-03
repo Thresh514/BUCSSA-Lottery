@@ -1,5 +1,6 @@
 import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import AzureADProvider from "next-auth/providers/azure-ad";
 import { RedisAdapter } from "./redis-adapter";
 import jwt from 'jsonwebtoken';
 
@@ -9,6 +10,11 @@ export const authOptions: AuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+    AzureADProvider({
+      clientId: process.env.AZURE_AD_CLIENT_ID!,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+      tenantId: process.env.AZURE_AD_TENANT_ID!,
+    })
   ],
   adapter: RedisAdapter,
   session: {
@@ -16,24 +22,24 @@ export const authOptions: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async signIn({ user }) {
-      // 只允许 bu.edu 和 gmail.com 的邮箱
-      // console.log("🔐 signIn callback triggered:", { email: user.email, id: user.id });
+    // async signIn({ user }) {
+    //     // 只允许 bu.edu 和 gmail.com 的邮箱
+    //     console.log("🔐 signIn callback triggered:", { email: user.email, id: user.id });
 
-      // const userEmail = user.email || "";
-      // const allowed = userEmail.endsWith("@bu.edu") || userEmail.endsWith("@gmail.com");
+    //     const userEmail = user.email || "";
+    //     const allowed = userEmail.endsWith("@bu.edu") || userEmail.endsWith("@gmail.com");
 
-      // console.log("✅ Email check result:", { email: userEmail, allowed });
-      
-      // if (!allowed) {
-      //   console.log("❌ Email not allowed, blocking sign in");
-      //   return false;
-      // }
+    //     console.log("✅ Email check result:", { email: userEmail, allowed });
 
-      // 简化：只检查邮箱格式，管理员检查在 JWT 回调中进行
-      // console.log("✅ Email allowed, proceeding with authentication");
-      return true;
-    },
+    //     if (!allowed) {
+    //       console.log("❌ Email not allowed, blocking sign in");
+    //       return false;
+    //     }
+
+    //     // 简化：只检查邮箱格式，管理员检查在 JWT 回调中进行
+    //     console.log("✅ Email allowed, proceeding with authentication");
+    //   return true;
+    // },
     async jwt({ token, user }) {
 
       // console.log("🎫 JWT callback triggered:", { 
