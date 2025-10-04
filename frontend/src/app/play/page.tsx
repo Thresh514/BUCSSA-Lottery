@@ -141,7 +141,7 @@ export default function PlayPage() {
       );
       if (userElimination) {
         setIsEliminated(true);
-        setEliminatedReason(userElimination.reason);
+        setEliminatedReason(userElimination.eliminatedReason);
       }
       console.log("eliminated event raw:", JSON.stringify(data, null, 2));
       console.log("session email:", session.user?.email);
