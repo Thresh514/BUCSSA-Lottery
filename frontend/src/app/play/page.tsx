@@ -339,7 +339,7 @@ export default function PlayPage() {
               您已被淘汰!
             </p>
             {eliminatedReason && (
-              <p className="text-blue-600 text-lg">
+              <p className="text-red-600 text-lg font-semibold">
                 原因：{eliminatedReason === "no_answer"
                   ? "您未在规定时间内选择"
                   : eliminatedReason === "majority_choice"
