@@ -437,11 +437,11 @@ export default function PlayPage() {
       </main>
 
       {/* 底部图片 */}
-      <div className="fixed bottom-12 left-1/3 -translate-x-1/2 z-30 w-auto flex justify-center pointer-events-none">
+      <div className="fixed bottom-12 left-20 -translate-x-1/2 z-30 w-auto flex justify-center pointer-events-none">
         <Image
           src="/dog.webp"
           alt="dog"
-          className="h-56 md:h-72 object-contain drop-shadow-lg"
+          className="h-40 md:h-72 object-contain drop-shadow-lg"
           width={400}
           height={400}
         />
