@@ -140,21 +140,21 @@ export class GameManager {
   private async startCountdown(): Promise<void> {
     const survivorsCount = await redis.sCard(RedisKeys.roomSurvivors(this.roomId));
 
-    let timeLeft = 20;
-    // if (survivorsCount <= 40) {
-    //   timeLeft = 15;
-    // } else if (survivorsCount <= 75) {
-    //   timeLeft = 20;
-    // } else if (survivorsCount <= 150) {
-    //   timeLeft = 30;
-    // } else {
-    //   timeLeft = 40;
-    // }
+    let timeLeft: number;
+    if (survivorsCount <= 30) {
+      timeLeft = 15;
+    } else if (survivorsCount <= 50) {
+      timeLeft = 20;
+    } else if (survivorsCount <= 120) {
+      timeLeft = 30;
+    } else {
+      timeLeft = 40;
+    }
 
     this.currentTimeLeft = timeLeft;
 
     // 更新Redis中的时间
-    // await redis.hSet(RedisKeys.gameState(this.roomId), 'timeLeft', timeLeft.toString());
+    await redis.hSet(RedisKeys.gameState(this.roomId), 'timeLeft', timeLeft.toString());
 
     // Clear any existing countdown
     if (this.countdownInterval) {
@@ -211,14 +211,14 @@ export class GameManager {
       B: parseInt(answersFromRedis.B || '0')
     };
 
-    let eliminatedUsers: string[] = [];
+    let eliminatedUsers: { userEmail: string, eliminatedReason: 'no_answer' | 'majority_choice' }[] = [];
 
     // 检查未答题用户并淘汰
     for (const userEmail of survivors) {
       const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
       if (!answer || (answer !== 'A' && answer !== 'B')) {
         // 未答题视为弃权，淘汰
-        eliminatedUsers.push(userEmail);
+        eliminatedUsers.push({ userEmail, eliminatedReason:'no_answer' });
         await redis.sRem(RedisKeys.roomSurvivors(this.roomId), userEmail);
         await redis.sAdd(RedisKeys.roomEliminated(this.roomId), userEmail);
         await redis.hSet(RedisKeys.userSession(userEmail), 'isAlive', 'false');
@@ -242,7 +242,7 @@ export class GameManager {
       const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
       if (majorityAnswer && answer === majorityAnswer) {
         // 淘汰用户
-        eliminatedUsers.push(userEmail);
+        eliminatedUsers.push({ userEmail, eliminatedReason:'majority_choice' });
         await redis.sRem(RedisKeys.roomSurvivors(this.roomId), userEmail);
         await redis.sAdd(RedisKeys.roomEliminated(this.roomId), userEmail);
         await redis.hSet(RedisKeys.userSession(userEmail), 'isAlive', 'false');

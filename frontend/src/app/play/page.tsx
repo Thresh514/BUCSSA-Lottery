@@ -38,6 +38,7 @@ export default function PlayPage() {
   const [isWinner, setIsWinner] = useState(false);
   const [isTie, setIsTie] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [eliminatedReason, setEliminatedReason] = useState<"no_answer" | "majority_choice" | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
@@ -135,9 +136,15 @@ export default function PlayPage() {
 
     socket.on("eliminated", (data: any) => {
       console.log("eliminated event data:", data);
-      if (data.eliminated.includes(session.user?.email || "")) {
+      const userElimination = data.eliminated.find(
+        (user: any) => user.userEmail === session.user?.email
+      );
+      if (userElimination) {
         setIsEliminated(true);
+        setEliminatedReason(userElimination.reason);
       }
+      console.log("eliminated event raw:", JSON.stringify(data, null, 2));
+      console.log("session email:", session.user?.email);
     });
 
     socket.on("winner", (data: any) => {
@@ -331,6 +338,15 @@ export default function PlayPage() {
             <p className="text-red-800 text-3xl font-bold tracking-wider">
               您已被淘汰!
             </p>
+            {eliminatedReason && (
+              <p className="text-blue-600 text-lg">
+                原因：{eliminatedReason === "no_answer"
+                  ? "您未在规定时间内选择"
+                  : eliminatedReason === "majority_choice"
+                  ? "您选择了多数的选项"
+                  : eliminatedReason}
+              </p>
+            )}
             <p className="text-red-600 text-lg">
               感谢您的参与，请继续观看其他玩家的比赛！
             </p>

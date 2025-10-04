@@ -8,7 +8,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import BackgroundImage from "@/components/game/BackgroundImage";
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
