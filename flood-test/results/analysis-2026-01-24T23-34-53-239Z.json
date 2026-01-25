@@ -1,0 +1,128 @@
+{
+  "analyses": [
+    {
+      "phase": "phase1-connection-capacity",
+      "issues": [
+        {
+          "type": "connection",
+          "severity": "critical",
+          "message": "连接成功率过低: 0.00%",
+          "recommendation": "检查系统硬上限（ulimit、TCP 连接数、Redis maxclients）"
+        }
+      ],
+      "recommendations": "🔴 发现严重瓶颈，建议优先处理：\n  1. 连接成功率过低: 0.00%\n     建议: 检查系统硬上限（ulimit、TCP 连接数、Redis maxclients）",
+      "bottleneckTypes": {
+        "cpu": 0,
+        "redis": 0,
+        "memory": 0,
+        "network": 0,
+        "connection": 1,
+        "settlement": 0,
+        "reconnect": 0
+      },
+      "primaryBottleneck": "connection",
+      "summary": {
+        "totalIssues": 1,
+        "critical": 1,
+        "warnings": 0
+      }
+    },
+    {
+      "phase": "phase2-low-frequency-messages",
+      "issues": [],
+      "recommendations": "",
+      "bottleneckTypes": {
+        "cpu": 0,
+        "redis": 0,
+        "memory": 0,
+        "network": 0,
+        "connection": 0,
+        "settlement": 0,
+        "reconnect": 0
+      },
+      "primaryBottleneck": "none",
+      "summary": {
+        "totalIssues": 0,
+        "critical": 0,
+        "warnings": 0
+      }
+    },
+    {
+      "phase": "phase4-settlement-spike",
+      "issues": [
+        {
+          "type": "cpu",
+          "severity": "critical",
+          "message": "CPU 使用率过高: 最大=100.0%",
+          "recommendation": "考虑水平扩展（多进程/多实例）或优化 CPU 密集型代码"
+        },
+        {
+          "type": "network",
+          "severity": "critical",
+          "message": "消息延迟过高: P99=584.36ms",
+          "recommendation": "检查网络延迟、广播效率，考虑优化消息大小和频率"
+        }
+      ],
+      "recommendations": "🔴 发现严重瓶颈，建议优先处理：\n  1. CPU 使用率过高: 最大=100.0%\n     建议: 考虑水平扩展（多进程/多实例）或优化 CPU 密集型代码\n  2. 消息延迟过高: P99=584.36ms\n     建议: 检查网络延迟、广播效率，考虑优化消息大小和频率",
+      "bottleneckTypes": {
+        "cpu": 1,
+        "redis": 0,
+        "memory": 0,
+        "network": 1,
+        "connection": 0,
+        "settlement": 0,
+        "reconnect": 0
+      },
+      "primaryBottleneck": "cpu",
+      "summary": {
+        "totalIssues": 2,
+        "critical": 2,
+        "warnings": 0
+      }
+    },
+    {
+      "phase": "phase5-reconnect-storm",
+      "issues": [
+        {
+          "type": "cpu",
+          "severity": "critical",
+          "message": "CPU 使用率过高: 最大=100.0%",
+          "recommendation": "考虑水平扩展（多进程/多实例）或优化 CPU 密集型代码"
+        },
+        {
+          "type": "redis",
+          "severity": "critical",
+          "message": "Redis 延迟过高: 最大=17.52ms",
+          "recommendation": "检查 Redis 网络延迟、考虑使用本地 Redis 或优化 Redis 操作（批量、管道）"
+        },
+        {
+          "type": "network",
+          "severity": "critical",
+          "message": "消息延迟过高: P99=63600.02ms",
+          "recommendation": "检查网络延迟、广播效率，考虑优化消息大小和频率"
+        }
+      ],
+      "recommendations": "🔴 发现严重瓶颈，建议优先处理：\n  1. CPU 使用率过高: 最大=100.0%\n     建议: 考虑水平扩展（多进程/多实例）或优化 CPU 密集型代码\n  2. Redis 延迟过高: 最大=17.52ms\n     建议: 检查 Redis 网络延迟、考虑使用本地 Redis 或优化 Redis 操作（批量、管道）\n  3. 消息延迟过高: P99=63600.02ms\n     建议: 检查网络延迟、广播效率，考虑优化消息大小和频率",
+      "bottleneckTypes": {
+        "cpu": 1,
+        "redis": 1,
+        "memory": 0,
+        "network": 1,
+        "connection": 0,
+        "settlement": 0,
+        "reconnect": 0
+      },
+      "primaryBottleneck": "cpu",
+      "summary": {
+        "totalIssues": 3,
+        "critical": 3,
+        "warnings": 0
+      }
+    }
+  ],
+  "summary": {
+    "totalIssues": 6,
+    "criticalIssues": 6,
+    "warningIssues": 0
+  }
+}

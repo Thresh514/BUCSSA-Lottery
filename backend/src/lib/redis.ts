@@ -1,24 +1,89 @@
 import { createClient } from 'redis';
 
+// 获取 Redis 连接配置
+function getRedisConfig() {
+  const redisUrl = process.env.REDIS_URL;
+  
+  if (!redisUrl) {
+    console.warn('⚠️  REDIS_URL 未设置，使用默认值: redis://localhost:6379');
+    return {
+      url: 'redis://localhost:6379',
+    };
+  }
+
+  // 解析 Redis URL 以提供更好的错误信息
+  try {
+    const url = new URL(redisUrl);
+    console.log(`🔗 Redis 连接配置: ${url.protocol}//${url.hostname}:${url.port || '6379'}${url.password ? ' (有密码)' : ' (无密码)'}`);
+  } catch (error) {
+    console.error('❌ Redis URL 格式错误:', redisUrl);
+    throw new Error(`Redis URL 格式错误: ${redisUrl}`);
+  }
+
+  return {
+    url: redisUrl,
+  };
+}
+
 // 创建Redis客户端
-const redis = createClient({
-  url: process.env.REDIS_URL!,
-});
+const redisConfig = getRedisConfig();
+const redis = createClient(redisConfig);
 
 // 连接Redis并监听错误和重连事件
-redis.connect().catch(console.error);
-redis.on("error", (err: any) => console.error("Redis Error:", err));
+let connectionAttempts = 0;
+const maxConnectionAttempts = 5;
+
+redis.connect().catch((error: any) => {
+  connectionAttempts++;
+  console.error(`❌ Redis 连接失败 (尝试 ${connectionAttempts}/${maxConnectionAttempts}):`, error.message);
+  
+  if (error.message.includes('password') || error.message.includes('AUTH')) {
+    console.error('💡 提示: 看起来是密码认证问题。请检查:');
+    console.error('   1. Redis 是否设置了密码 (requirepass)');
+    console.error('   2. REDIS_URL 格式是否正确: redis://:password@localhost:6379');
+    console.error('   3. 如果 Redis 没有密码，使用: redis://localhost:6379');
+  } else if (error.message.includes('ECONNREFUSED') || error.message.includes('connect')) {
+    console.error('💡 提示: 无法连接到 Redis 服务器。请检查:');
+    console.error('   1. Redis 服务是否已启动: redis-cli ping');
+    console.error('   2. Redis 是否运行在正确的端口 (默认 6379)');
+    console.error('   3. 防火墙是否阻止了连接');
+  } else if (error.message.includes('ENOTFOUND')) {
+    console.error('💡 提示: 无法解析 Redis 主机名。请检查:');
+    console.error('   1. REDIS_URL 中的主机名是否正确');
+    console.error('   2. 网络连接是否正常');
+  }
+});
+
+redis.on("error", (err: any) => {
+  console.error("❌ Redis 错误:", err.message);
+  
+  // 提供更详细的错误信息
+  if (err.message.includes('password') || err.message.includes('AUTH')) {
+    console.error('💡 这是密码认证错误。请检查 REDIS_URL 中的密码是否正确。');
+  }
+});
+
 redis.on("connect", () => {
-  // Redis连接成功
+  console.log("✅ Redis 连接成功");
+  connectionAttempts = 0; // 重置连接尝试计数
 });
+
 redis.on("ready", () => {
-  // Redis准备就绪
+  console.log("✅ Redis 准备就绪");
 });
+
 redis.on("end", () => {
-  // Redis连接关闭
+  console.log("⚠️  Redis 连接关闭");
 });
+
 redis.on("reconnecting", () => {
-  // Redis正在重连
+  connectionAttempts++;
+  console.log(`🔄 Redis 正在重连 (尝试 ${connectionAttempts}/${maxConnectionAttempts})...`);
+  
+  if (connectionAttempts >= maxConnectionAttempts) {
+    console.error(`❌ Redis 重连失败，已尝试 ${maxConnectionAttempts} 次`);
+    console.error('💡 请检查 Redis 服务状态和连接配置');
+  }
 });
 
 export { redis };

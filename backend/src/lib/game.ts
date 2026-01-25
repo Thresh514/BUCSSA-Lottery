@@ -1,5 +1,6 @@
 import { redis, RedisKeys } from './redis.js';
 import { getSocketIO } from './socket.js';
+import { getMetricsCollector } from './metrics.js';
 
 // 新的题目结构 - 只有A/B两个选项
 export interface MinorityQuestion {
@@ -81,6 +82,7 @@ export class GameManager {
       const roomState = await this.getRoomState();
       const gameState = { ...roomState, "userAnswer": null, "roundResult": null };
       this.io.to(this.roomId).emit('player_count_update', gameState);
+      getMetricsCollector().recordEvent('broadcast');
     }
   }
 
@@ -129,6 +131,7 @@ export class GameManager {
       const gameState = { ...roomState, "userAnswer": null, "roundResult": null, "timeLeft": this.getCurrentTimeLeft() };
 
       this.io.to(this.roomId).emit('new_question', gameState);
+      getMetricsCollector().recordEvent('broadcast');
       // 启动倒计时
 
     } else {
@@ -252,6 +255,7 @@ export class GameManager {
 
     if (this.io) {
       this.io.to(this.roomId).emit('eliminated', { "eliminated": eliminatedUsers });
+      getMetricsCollector().recordEvent('broadcast');
     }
 
     // 检查游戏是否结束
@@ -282,6 +286,7 @@ export class GameManager {
       this.io.to(this.roomId).emit('round_result',
         gameState
       );
+      getMetricsCollector().recordEvent('broadcast');
     }
   }
 
@@ -309,11 +314,15 @@ export class GameManager {
         console.log(`Winner is ${winner}`);
         this.io.to(this.roomId).emit('winner', { winnerEmail: winner });
         this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
+        getMetricsCollector().recordEvent('broadcast');
+        getMetricsCollector().recordEvent('broadcast');
       }
       if (tier) {
         console.log(`Game ended in a tie between: ${tier.join(', ')}`);
         this.io.to(this.roomId).emit('tie', { finalists: tier });
         this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
+        getMetricsCollector().recordEvent('broadcast');
+        getMetricsCollector().recordEvent('broadcast');
       }
     }
   }
@@ -365,6 +374,7 @@ export class GameManager {
 
     if (this.io) {
       this.io.to(this.roomId).emit('game_start', gameState);
+      getMetricsCollector().recordEvent('broadcast');
     }
   }
 

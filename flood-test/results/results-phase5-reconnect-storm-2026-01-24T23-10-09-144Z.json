@@ -1,0 +1,90 @@
+{
+  "phase": "phase5-reconnect-storm",
+  "timestamp": "2026-01-24T23:10:09.143Z",
+  "duration": {
+    "seconds": 83.430010083,
+    "milliseconds": 83430.010083
+  },
+  "connections": {
+    "totalAttempts": 1300,
+    "successful": 1300,
+    "failed": 0,
+    "disconnected": 300,
+    "successRate": 100,
+    "currentActive": 1000,
+    "connectTime": {
+      "min": 25.604499999999916,
+      "max": 4336.20879199999,
+      "avg": 642.7091540800003,
+      "p50": 60.94941600000004,
+      "p95": 4275.601167000001,
+      "p99": 4325.681624999997
+    }
+  },
+  "messages": {
+    "total": 211300,
+    "perSecond": 2532.6618058632507,
+    "byEvent": {
+      "game_state": 1300,
+      "player_count_update": 210000
+    },
+    "latency": {
+      "min": 30.948875000000044,
+      "max": 63621.414000000004,
+      "avg": 62452.98358069648,
+      "p50": 62846.896125,
+      "p95": 63512.440500000004,
+      "p99": 63600.021875
+    }
+  },
+  "errors": {
+    "total": 0,
+    "byType": {}
+  },
+  "metrics": {
+    "eventLoopLag": {
+      "max": 7.608000000007451,
+      "avg": 1.5844875180705293,
+      "p95": 7.322874999954365,
+      "p99": 7.608000000007451
+    },
+    "cpu": {
+      "max": 100,
+      "avg": 15.93052776103166
+    },
+    "memory": {
+      "max": 550879232,
+      "avg": 154587974.93975905,
+      "maxMB": "525.36",
+      "avgMB": "147.43"
+    },
+    "redis": {
+      "maxOpsPerSecond": 8677,
+      "avgOpsPerSecond": 433.38461538461536,
+      "maxLatency": 17.516041000024416,
+      "avgLatency": 2.0388920722902384
+    },
+    "connections": {
+      "max": 2000,
+      "avg": 1252.012048192771
+    }
+  },
+  "raw": {
+    "connections": 1600,
+    "messages": 211300,
+    "errors": 0,
+    "metricsSamples": 83
+  },
+  "reconnect": {
+    "disconnectCount": 300,
+    "disconnectPercentage": 30,
+    "reconnectDelay": 5000,
+    "reconnectDuration": 4346.155417000002,
+    "successfulReconnects": 300,
+    "failedReconnects": 0,
+    "reconnectSuccessRate": "100.00",
+    "beforeDisconnect": 1000,
+    "afterDisconnect": 700,
+    "afterReconnect": 1000
+  }
+}

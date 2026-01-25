@@ -1,0 +1,225 @@
+{
+  "timestamp": "2026-01-25T00:28:15.917Z",
+  "totalPhases": 5,
+  "phases": [
+    "phase1-connection-capacity",
+    "phase2-low-frequency-messages",
+    "phase3-progressive-throughput",
+    "phase4-settlement-spike",
+    "phase5-reconnect-storm"
+  ],
+  "overall": {
+    "totalDuration": 2629.9941473759995,
+    "totalConnections": 5300,
+    "totalMessages": 735561,
+    "totalErrors": 431622
+  },
+  "byPhase": {
+    "phase1-connection-capacity": {
+      "duration": 640.029784666,
+      "connections": {
+        "successful": 1000,
+        "successRate": 100
+      },
+      "messages": {
+        "total": 1000,
+        "perSecond": 1.5624272869142344
+      },
+      "errors": {
+        "total": 0
+      },
+      "metrics": {
+        "eventLoopLag": {
+          "max": 3.2777919999789447,
+          "avg": 0.5626797496178296,
+          "p95": 0.7541659999405965,
+          "p99": 2.319167000008747
+        },
+        "memory": {
+          "max": 122748928,
+          "avg": 108686686.9483568,
+          "maxMB": "117.06",
+          "avgMB": "103.65"
+        },
+        "redis": {
+          "maxOpsPerSecond": 627,
+          "avgOpsPerSecond": 27.61815336463224,
+          "maxLatency": 28.418583999969997,
+          "avgLatency": 0.36063539436402553
+        },
+        "connections": {
+          "max": 1000,
+          "avg": 974.1455399061033
+        }
+      }
+    },
+    "phase2-low-frequency-messages": {
+      "duration": 602.0871714589998,
+      "connections": {
+        "successful": 1000,
+        "successRate": 100
+      },
+      "messages": {
+        "total": 3510,
+        "perSecond": 5.82972062250461
+      },
+      "errors": {
+        "total": 44147
+      },
+      "metrics": {
+        "eventLoopLag": {
+          "max": 1.3307499999646097,
+          "avg": 1.0573782562553269,
+          "p95": 1.2542079999111593,
+          "p99": 1.2964999999385327
+        },
+        "cpu": {
+          "max": 82.5408215661104,
+          "avg": 12.646563859746042
+        },
+        "memory": {
+          "max": 125108224,
+          "avg": 110508689.67720465,
+          "maxMB": "119.31",
+          "avgMB": "105.39"
+        },
+        "redis": {
+          "maxOpsPerSecond": 7997,
+          "avgOpsPerSecond": 184.83194675540764,
+          "maxLatency": 12.743874999927357,
+          "avgLatency": 0.407289500827103
+        },
+        "connections": {
+          "max": 1001,
+          "avg": 1000.0399334442595
+        }
+      }
+    },
+    "phase3-progressive-throughput": {
+      "duration": 1225.4560051249996,
+      "connections": {
+        "successful": 1000,
+        "successRate": 100
+      },
+      "messages": {
+        "total": 31434,
+        "perSecond": 25.65085965431591
+      },
+      "errors": {
+        "total": 386218
+      },
+      "metrics": {
+        "eventLoopLag": {
+          "max": 63.98045799997635,
+          "avg": 6.07794628608552,
+          "p95": 25.2908330000937,
+          "p99": 48.83712500007823
+        },
+        "cpu": {
+          "max": 100,
+          "avg": 30.534997509116035
+        },
+        "memory": {
+          "max": 157007872,
+          "avg": 113011621.35081968,
+          "maxMB": "149.73",
+          "avgMB": "107.78"
+        },
+        "redis": {
+          "maxOpsPerSecond": 7449,
+          "avgOpsPerSecond": 699.383606557377,
+          "maxLatency": 68.8110830001533,
+          "avgLatency": 0.7263566016391316
+        },
+        "connections": {
+          "max": 1001,
+          "avg": 1000.7540983606557
+        }
+      }
+    },
+    "phase4-settlement-spike": {
+      "duration": 79.00751979199983,
+      "connections": {
+        "successful": 743,
+        "successRate": 74.3
+      },
+      "messages": {
+        "total": 353503,
+        "perSecond": 4474.295623133776
+      },
+      "errors": {
+        "total": 1257
+      },
+      "metrics": {
+        "eventLoopLag": {
+          "max": 42.324459000024945,
+          "avg": 28.28529196151365,
+          "p95": 42.324459000024945,
+          "p99": 42.324459000024945
+        },
+        "cpu": {
+          "max": 94.15292517006803,
+          "avg": 21.927315059058614
+        },
+        "memory": {
+          "max": 118456320,
+          "avg": 99671853.94871795,
+          "maxMB": "112.97",
+          "avgMB": "95.05"
+        },
+        "redis": {
+          "maxOpsPerSecond": 3785,
+          "avgOpsPerSecond": 248.74358974358975,
+          "maxLatency": 42.1415420002304,
+          "avgLatency": 1.706464807670086
+        },
+        "connections": {
+          "max": 778,
+          "avg": 712.3205128205128
+        }
+      }
+    },
+    "phase5-reconnect-storm": {
+      "duration": 83.41366633399996,
+      "connections": {
+        "successful": 1300,
+        "successRate": 100
+      },
+      "messages": {
+        "total": 346114,
+        "perSecond": 4149.36802578742
+      },
+      "errors": {
+        "total": 0
+      },
+      "metrics": {
+        "eventLoopLag": {
+          "max": 13.885499999858439,
+          "avg": 3.9325459277122676,
+          "p95": 13.885499999858439,
+          "p99": 13.885499999858439
+        },
+        "cpu": {
+          "max": 94.52454991816694,
+          "avg": 4.752487607407984
+        },
+        "memory": {
+          "max": 149143552,
+          "avg": 93784187.37349397,
+          "maxMB": "142.23",
+          "avgMB": "89.44"
+        },
+        "redis": {
+          "maxOpsPerSecond": 4676,
+          "avgOpsPerSecond": 230.6987951807229,
+          "maxLatency": 20.190999999642372,
+          "avgLatency": 0.5781721445642053
+        },
+        "connections": {
+          "max": 1001,
+          "avg": 960.7469879518072
+        }
+      }
+    }
+  }
+}

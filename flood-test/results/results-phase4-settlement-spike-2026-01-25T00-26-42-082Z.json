@@ -1,0 +1,86 @@
+{
+  "phase": "phase4-settlement-spike",
+  "timestamp": "2026-01-25T00:26:42.081Z",
+  "duration": {
+    "seconds": 79.00751979199983,
+    "milliseconds": 79007.51979199983
+  },
+  "connections": {
+    "totalAttempts": 1000,
+    "successful": 743,
+    "failed": 257,
+    "disconnected": 304,
+    "successRate": 74.3,
+    "currentActive": 696,
+    "connectTime": {
+      "min": 162.80949999997392,
+      "max": 8718.709458999801,
+      "avg": 2976.1202825881574,
+      "p50": 2072.9323749998584,
+      "p95": 7735.217457999941,
+      "p99": 8351.602665999904
+    }
+  },
+  "messages": {
+    "total": 353503,
+    "perSecond": 4474.295623133776,
+    "byEvent": {
+      "player_count_update": 352799,
+      "game_state": 704
+    },
+    "latency": {
+      "min": 209.10333399986848,
+      "max": 46957.83895899961,
+      "avg": 10428.756805286324,
+      "p50": 5832.223249999806,
+      "p95": 45881.57529200008,
+      "p99": 46568.92200000025
+    }
+  },
+  "errors": {
+    "total": 1257,
+    "byType": {
+      "connect_error": 257,
+      "submit_answer_error": 1000
+    }
+  },
+  "metrics": {
+    "eventLoopLag": {
+      "max": 42.324459000024945,
+      "avg": 28.28529196151365,
+      "p95": 42.324459000024945,
+      "p99": 42.324459000024945
+    },
+    "cpu": {
+      "max": 94.15292517006803,
+      "avg": 21.927315059058614
+    },
+    "memory": {
+      "max": 118456320,
+      "avg": 99671853.94871795,
+      "maxMB": "112.97",
+      "avgMB": "95.05"
+    },
+    "redis": {
+      "maxOpsPerSecond": 3785,
+      "avgOpsPerSecond": 248.74358974358975,
+      "maxLatency": 42.1415420002304,
+      "avgLatency": 1.706464807670086
+    },
+    "connections": {
+      "max": 778,
+      "avg": 712.3205128205128
+    }
+  },
+  "raw": {
+    "connections": 1047,
+    "messages": 353503,
+    "errors": 1257,
+    "metricsSamples": 78
+  },
+  "settlement": {
+    "spikeWindow": 2000,
+    "actualDuration": 2001.8442920004018,
+    "submissionsPerSecond": "499.54"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "phase": "phase3-progressive-throughput",
+  "timestamp": "2026-01-25T00:25:12.730Z",
+  "duration": {
+    "seconds": 1225.4560051249996,
+    "milliseconds": 1225456.0051249997
+  },
+  "connections": {
+    "totalAttempts": 1000,
+    "successful": 1000,
+    "failed": 0,
+    "disconnected": 0,
+    "successRate": 100,
+    "currentActive": 1000,
+    "connectTime": {
+      "min": 93.94779199990444,
+      "max": 340.5356250000186,
+      "avg": 234.37518229399902,
+      "p50": 225.39024999993853,
+      "p95": 311.9713749999646,
+      "p99": 340.1099159999285
+    }
+  },
+  "messages": {
+    "total": 31434,
+    "perSecond": 25.65085965431591,
+    "byEvent": {
+      "game_state": 2000,
+      "submit_answer_success": 5434,
+      "eliminated": 8000,
+      "round_result": 7000,
+      "new_question": 7000,
+      "tie": 1000,
+      "game_start": 1000
+    },
+    "latency": {
+      "min": 1.438209000043571,
+      "max": 300581.8116670002,
+      "avg": 129264.3609446218,
+      "p50": 164613.18241699995,
+      "p95": 246885.33266700013,
+      "p99": 300183.92449999996
+    }
+  },
+  "errors": {
+    "total": 386218,
+    "byType": {
+      "submit_answer_error": 386218
+    }
+  },
+  "metrics": {
+    "eventLoopLag": {
+      "max": 63.98045799997635,
+      "avg": 6.07794628608552,
+      "p95": 25.2908330000937,
+      "p99": 48.83712500007823
+    },
+    "cpu": {
+      "max": 100,
+      "avg": 30.534997509116035
+    },
+    "memory": {
+      "max": 157007872,
+      "avg": 113011621.35081968,
+      "maxMB": "149.73",
+      "avgMB": "107.78"
+    },
+    "redis": {
+      "maxOpsPerSecond": 7449,
+      "avgOpsPerSecond": 699.383606557377,
+      "maxLatency": 68.8110830001533,
+      "avgLatency": 0.7263566016391316
+    },
+    "connections": {
+      "max": 1001,
+      "avg": 1000.7540983606557
+    }
+  },
+  "raw": {
+    "connections": 1000,
+    "messages": 31434,
+    "errors": 386218,
+    "metricsSamples": 1220
+  }
+}

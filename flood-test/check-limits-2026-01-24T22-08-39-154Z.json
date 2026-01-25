@@ -1,0 +1,46 @@
+{
+  "checks": [
+    {
+      "name": "文件句柄数 (ulimit -n)",
+      "value": 1048575,
+      "recommended": 65535,
+      "message": "文件句柄数充足",
+      "status": "ok"
+    },
+    {
+      "name": "系统可用内存",
+      "value": "0.32GB / 16.00GB",
+      "usedPercent": "98.03",
+      "warning": "可用内存不足 (0.32GB)，可能影响性能",
+      "status": "ok"
+    },
+    {
+      "name": "TCP 连接数限制",
+      "value": 122880,
+      "platform": "darwin",
+      "message": "TCP 连接限制检查完成",
+      "status": "ok"
+    },
+    {
+      "name": "CPU 核心数",
+      "value": 8,
+      "model": "Apple M3",
+      "message": "CPU 核心数充足",
+      "status": "ok"
+    },
+    {
+      "name": "Redis 连接",
+      "status": "ok",
+      "latency": "0.96ms",
+      "maxClients": 10000,
+      "usedMemory": "1.04MB"
+    }
+  ],
+  "warnings": [
+    {
+      "name": "系统可用内存",
+      "message": "可用内存不足 (0.32GB)，可能影响性能"
+    }
+  ],
+  "errors": []
+}

@@ -4,7 +4,8 @@
   "description": "",
   "main": "heavy-load-test.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check-server": "node check-server.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +14,7 @@
   "dependencies": {
     "dotenv": "^17.2.2",
     "jsonwebtoken": "^9.0.2",
+    "redis": "^5.10.0",
     "socket.io-client": "^4.8.1"
   }
 }

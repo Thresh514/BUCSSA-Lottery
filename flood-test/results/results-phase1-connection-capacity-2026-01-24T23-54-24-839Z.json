@@ -1,0 +1,73 @@
+{
+  "phase": "phase1-connection-capacity",
+  "timestamp": "2026-01-24T23:54:24.837Z",
+  "duration": {
+    "seconds": 640.029784666,
+    "milliseconds": 640029.7846659999
+  },
+  "connections": {
+    "totalAttempts": 1000,
+    "successful": 1000,
+    "failed": 0,
+    "disconnected": 0,
+    "successRate": 100,
+    "currentActive": 1000,
+    "connectTime": {
+      "min": 3.2666669999998703,
+      "max": 55.721166999999696,
+      "avg": 7.597770898000011,
+      "p50": 6.760624999998981,
+      "p95": 11.688625000002503,
+      "p99": 15.135083000001032
+    }
+  },
+  "messages": {
+    "total": 1000,
+    "perSecond": 1.5624272869142344,
+    "byEvent": {
+      "game_state": 1000
+    },
+    "latency": {
+      "min": 4.439542000000074,
+      "max": 56.88591699999961,
+      "avg": 8.921966891000011,
+      "p50": 7.576999999999316,
+      "p95": 14.855999999999767,
+      "p99": 18.892291000000114
+    }
+  },
+  "errors": {
+    "total": 0,
+    "byType": {}
+  },
+  "metrics": {
+    "eventLoopLag": {
+      "max": 3.2777919999789447,
+      "avg": 0.5626797496178296,
+      "p95": 0.7541659999405965,
+      "p99": 2.319167000008747
+    },
+    "memory": {
+      "max": 122748928,
+      "avg": 108686686.9483568,
+      "maxMB": "117.06",
+      "avgMB": "103.65"
+    },
+    "redis": {
+      "maxOpsPerSecond": 627,
+      "avgOpsPerSecond": 27.61815336463224,
+      "maxLatency": 28.418583999969997,
+      "avgLatency": 0.36063539436402553
+    },
+    "connections": {
+      "max": 1000,
+      "avg": 974.1455399061033
+    }
+  },
+  "raw": {
+    "connections": 1000,
+    "messages": 1000,
+    "errors": 0,
+    "metricsSamples": 639
+  }
+}

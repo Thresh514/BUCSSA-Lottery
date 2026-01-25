@@ -5,6 +5,7 @@ import cors from 'cors';
 import { initializeSocketIO } from './lib/socket.js';
 import submitAnswerRoutes from './routes/submit-answer.js';
 import adminRoutes from './routes/admin.js';
+import { getMetricsCollector } from './lib/metrics.js';
 
 const app = express();
 const server = createServer(app);
@@ -22,6 +23,16 @@ app.use(express.urlencoded({ extended: true }));
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Metrics endpoint
+app.get('/api/metrics', async (req, res) => {
+  try {
+    const metrics = await getMetricsCollector().getAllMetrics();
+    res.json(metrics);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to get metrics', message: error.message });
+  }
 });
 
 // API routes

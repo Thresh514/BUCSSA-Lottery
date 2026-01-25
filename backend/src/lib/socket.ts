@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { redis, RedisKeys } from './redis.js';
 import { getGameManager } from './game.js';
+import { getMetricsCollector } from './metrics.js';
 
 
 // 全局Socket.IO服务器实例
@@ -73,6 +74,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       // 新用户加入游戏
       await gameManager.addPlayer(user.email);
       gameManager.emitPlayerCountUpdate();
+      getMetricsCollector().recordEvent('join');
     }
 
     const roomState = await gameManager.getRoomState();
@@ -186,6 +188,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         });
 
         await gameManager.submitAnswer(user.email, answer);
+        getMetricsCollector().recordEvent('submit_answer');
 
         console.log(`🎉 [提交答案] 答案提交成功`, {
           userEmail: user.email,

@@ -1,0 +1,49 @@
+{
+  "server": {
+    "wsTarget": "ws://localhost:4000",
+    "httpTarget": "http://localhost:4000",
+    "metricsEndpoint": "/api/metrics",
+    "metricsInterval": 1000
+  },
+  "phases": {
+    "phase1": {
+      "name": "连接容量基线测试",
+      "concurrentUsers": 1000,
+      "rampRate": 30,
+      "holdDuration": 600
+    },
+    "phase2": {
+      "name": "低频消息吞吐测试",
+      "concurrentUsers": 1000,
+      "messageInterval": 12000,
+      "testDuration": 600
+    },
+    "phase3": {
+      "name": "中等吞吐逐步加速测试",
+      "concurrentUsers": 1000,
+      "stages": [
+        { "rate": 100, "duration": 300 },
+        { "rate": 200, "duration": 300 },
+        { "rate": 400, "duration": 300 },
+        { "rate": 800, "duration": 300 }
+      ]
+    },
+    "phase4": {
+      "name": "结算尖峰专项测试",
+      "concurrentUsers": 1000,
+      "spikeWindow": 2000
+    },
+    "phase5": {
+      "name": "重连风暴专项测试",
+      "concurrentUsers": 1000,
+      "disconnectPercentage": 0.3,
+      "reconnectDelay": 5000,
+      "stableDuration": 60
+    }
+  },
+  "output": {
+    "resultsDir": "results",
+    "generateTextReports": true,
+    "generateSummaryReport": true
+  }
+}
