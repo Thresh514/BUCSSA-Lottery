@@ -117,7 +117,6 @@ export default function AdminPage() {
     answers: { A: 0, B: 0 },
     survivorsCount: 0,
     eliminatedCount: 0,
-    userAnswer: null,
     timeLeft: 0,
   });
   const socketRef = useRef<Socket | null>(null);
@@ -267,13 +266,12 @@ export default function AdminPage() {
 
       if (response.ok) {
         setGameState({
-          status: "waiting",
           round: 0,
+          status: "waiting",
           currentQuestion: null,
           answers: { A: 0, B: 0 },
           survivorsCount: 0,
           eliminatedCount: 0,
-          userAnswer: null,
           timeLeft: 0,
         });
         setSentQuestions(new Set());

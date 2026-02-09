@@ -18,18 +18,14 @@ import {
   CheckCircle,
   Crown,
 } from "lucide-react";
-import { GameState } from "@/types";
+import { UserGameState } from "@/types";
 import Image from "next/image";
 
 export default function PlayPage() {
   const { data: session, status } = useSession();
-  const [gameState, setGameState] = useState<GameState>({
-    round: 0,
+  const [userGameState, setUserGameState] = useState<UserGameState>({
     status: "waiting",
-    currentQuestion: null,
-    answers: { A: 0, B: 0 },
-    survivorsCount: 0,
-    eliminatedCount: 0,
+    round: 0,
     userAnswer: null,
     timeLeft: 0,
   });
@@ -108,14 +104,14 @@ export default function PlayPage() {
       handleLogout();
     });
 
-    socket.on("game_state", (data: GameState) => {
+    socket.on("game_state", (data: UserGameState) => {
       console.log("game_state received:", data);
-      setGameState(data);
+      setUserGameState(data);
       setSelectedOption(data.userAnswer || "");
     });
 
-    socket.on("game_start", (data: GameState) => {
-      setGameState(data);
+    socket.on("game_start", (data: UserGameState) => {
+      setUserGameState(data);
       setSelectedOption(data.userAnswer || "");
       setIsWinner(false);
       setIsTie(false);
@@ -123,14 +119,14 @@ export default function PlayPage() {
       handleLogout();
     });
 
-    socket.on("new_question", (data: GameState) => {
+    socket.on("new_question", (data: UserGameState) => {
       setSelectedOption(data.userAnswer || "");
-      setGameState(data);
+      setUserGameState(data);
     });
 
-    socket.on("round_result", (data: GameState) => {
+    socket.on("round_result", (data: UserGameState) => {
       console.log("round_result received:", data);
-      setGameState(data);
+      setUserGameState(data);
       setSelectedOption(data.userAnswer || "");
     });
 
@@ -172,7 +168,7 @@ export default function PlayPage() {
   }, [session]);
 
   const handleSubmitAnswer = async (option: "A" | "B") => {
-    if (!gameState.currentQuestion || isEliminated || selectedOption) return;
+    if (isEliminated || selectedOption) return;
 
     try {
       setSelectedOption(option);
@@ -317,7 +313,7 @@ export default function PlayPage() {
 
       {/* Game Status Cards */}
       <main className="w-full h-auto px-8 py-8 items-center justify-center flex fixed top-[40vh] left-1/2 -translate-x-1/2 -translate-y-1/2 border border-white/50 rounded-md bg-white/25 backdrop-blur-sm">
-        {gameState.status === "waiting" && !isEliminated && (
+        {userGameState.status === "waiting" && !isEliminated && (
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Clock className="w-8 h-8 text-blue-600" />
@@ -382,17 +378,12 @@ export default function PlayPage() {
         )}
 
         {/* Question Area */}
-        {gameState.currentQuestion &&
-          gameState.status === "playing" &&
+        {userGameState.status === "playing" &&
           !isEliminated && (
             <div className="flex flex-col items-center justify-center space-y-8">
               <div className="flex items-center px-4 py-2 bg-gradient-primary text-gray-800 rounded-full text-2xl font-bold tracking-wider">
-                第 {gameState.round} 轮
+                第 {userGameState.round} 轮
               </div>
-
-              {/* <div className="flex items-center px-4 py-2 bg-gradient-primary text-gray-800 rounded-full text-3xl font-bold tracking-wider">
-                {gameState.currentQuestion.question}
-              </div> */}
 
               <div className="flex flex-col items-center gap-4 justify-center">
                 <Button

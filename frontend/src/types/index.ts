@@ -23,13 +23,21 @@ export interface MinorityQuestion {
   startTime: string;
 }
 
+// for admin and display
 export interface GameState {
-  status: "waiting" | "playing" | "ended";
   round: number;
+  status: "waiting" | "playing" | "ended";
   currentQuestion: MinorityQuestion | null;
   answers: { A: number; B: number } | null;
   survivorsCount: number;
   eliminatedCount: number;
+  timeLeft: number;
+}
+
+// for player
+export interface UserGameState {
+  status: "waiting" | "playing" | "ended";
+  round: number;
   userAnswer: 'A' | 'B' | null;
   timeLeft: number;
 }
