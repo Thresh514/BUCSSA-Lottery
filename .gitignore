@@ -41,3 +41,5 @@ backend/dist/
 */.tsbuildinfo
 
 .DS_Store
+
+flood-test/gameState.json

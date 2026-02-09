@@ -10,7 +10,7 @@ const CONFIG = {
   wssTarget: 'wss://lottery.bucssa.org',
   httpTarget: 'http://198.23.211.34:4000',
   httpsTarget: 'https://lottery.bucssa.org',
-  concurrentUsers: 300,
+  concurrentUsers: 600,
   testDuration: 600,
   arrivalRate: 20
 };
