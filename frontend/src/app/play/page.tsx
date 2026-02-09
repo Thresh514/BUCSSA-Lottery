@@ -163,6 +163,7 @@ export default function PlayPage() {
     });
 
     return () => {
+      console.log("disconnecting socket");
       socket.disconnect();
     };
   }, [session]);
