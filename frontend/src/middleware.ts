@@ -49,8 +49,8 @@ export default withAuth(
 
         // Require authentication for protected routes
         if (pathname.startsWith('/admin') || pathname.startsWith('/play') || pathname.startsWith('/show')) {
-          console.log("Checking authentication for:", pathname)
-          console.log("Token details:", { id: token?.id, isAdmin: token?.isAdmin, isDisplay: token?.isDisplay, email: token?.email, accessToken: token?.accessToken })
+          // console.log("Checking authentication for:", pathname)
+          // console.log("Token details:", { id: token?.id, isAdmin: token?.isAdmin, isDisplay: token?.isDisplay, email: token?.email, accessToken: token?.accessToken })
           return !!token?.accessToken
         }
 

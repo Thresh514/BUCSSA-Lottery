@@ -30,8 +30,7 @@ app.use('/api/admin', adminRoutes);
 
 // Start the server
 server.listen(PORT, () => {
-  console.log(`🚀 Minority Game Backend is running on http://localhost:${PORT}`);
-  console.log(`📡 Socket.IO server is ready`);
+  console.log(`🚀 Minority Game Backend is listening on https://${process.env.RAILWAY_PUBLIC_DOMAIN || `http://localhost:${PORT}`}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
 });
 
