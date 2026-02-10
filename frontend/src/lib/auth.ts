@@ -68,7 +68,7 @@ export const authOptions: AuthOptions = {
 
         } catch (error) {
 
-          console.error("❌ JWT callback error:", error);
+          // console.error("❌ JWT callback error:", error);
           // Don't fail the whole authentication - set defaults
           token.isAdmin = false;
           token.isDisplay = false;
@@ -76,7 +76,7 @@ export const authOptions: AuthOptions = {
         }
       }
 
-      console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin, isDisplay: token.isDisplay });
+      // console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin, isDisplay: token.isDisplay });
 
       return token;
     },
