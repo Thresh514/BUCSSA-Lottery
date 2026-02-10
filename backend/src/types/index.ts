@@ -28,6 +28,10 @@ export interface RoomState {
   timeLeft: number;
   survivorsCount: number;
   eliminatedCount: number;
+  /** 游戏结束时若有唯一获胜者 */
+  winner?: string | null;
+  /** 游戏结束时若为平局（剩余 2 人），决赛圈玩家邮箱列表 */
+  tie?: string[] | null;
 }
 
 // 玩家端状态（单一 status，只发给 player）

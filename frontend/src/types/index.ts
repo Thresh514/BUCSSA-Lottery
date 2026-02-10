@@ -23,7 +23,7 @@ export interface MinorityQuestion {
   startTime: string;
 }
 
-// for admin and display
+// for admin and display（与后端 RoomState 一致，含结束时的 winner/tie）
 export interface GameState {
   round: number;
   status: "waiting" | "playing" | "ended";
@@ -32,6 +32,10 @@ export interface GameState {
   survivorsCount: number;
   eliminatedCount: number;
   timeLeft: number;
+  /** 游戏结束时若有唯一获胜者 */
+  winner?: string | null;
+  /** 游戏结束时若为平局（剩余 2 人），决赛圈玩家邮箱列表 */
+  tie?: string[] | null;
 }
 
 // for player（status 含游戏阶段 + 玩家结果，由前端根据服务端 payload 推导）

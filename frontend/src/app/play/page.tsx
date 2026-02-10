@@ -109,23 +109,38 @@ export default function PlayPage() {
 
     socket.on("game_state", (data: UserGameState) => {
       console.log("game_state received:", data);
-      setUserGameState(data);
+      // 已处于结束状态（平局/冠军/淘汰）时，不被迟到的 waiting/playing 覆盖
+      setUserGameState((prev) => {
+        const ended = ["tie", "winner", "eliminated"].includes(prev.status);
+        const dataEnded = ["tie", "winner", "eliminated"].includes(data.status);
+        if (ended && !dataEnded) return prev;
+        return data;
+      });
       setSelectedOption(data.userAnswer || "");
     });
 
     socket.on("game_start", (data: UserGameState) => {
       setUserGameState(data);
       setSelectedOption(data.userAnswer || "");
+      if (data.status === "waiting") {
+        window.location.reload();
+      }
     });
 
     socket.on("new_question", (data: UserGameState) => {
-      setUserGameState(data);
+      // 已处于结束状态时，不被迟到的 new_question 覆盖
+      setUserGameState((prev) =>
+        ["tie", "winner", "eliminated"].includes(prev.status) ? prev : data
+      );
       setSelectedOption(data.userAnswer || "");
     });
 
     socket.on("round_result", (data: UserGameState) => {
       console.log("round_result received:", data);
-      setUserGameState(data);
+      // 已处于结束状态时，不被迟到的 round_result（waiting）覆盖
+      setUserGameState((prev) =>
+        ["tie", "winner", "eliminated"].includes(prev.status) ? prev : data
+      );
       setSelectedOption(data.userAnswer || "");
     });
 

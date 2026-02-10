@@ -178,6 +178,14 @@ export default function AdminPage() {
 
     socket.on("game_state", (data: GameState) => {
       setGameState(data);
+      // 从 roomState 同步 winner/tie，避免重连后只收到 game_state 而漏掉 tie/winner 事件
+      if (data.tie && data.tie.length >= 2) {
+        setTie(data.tie);
+        setWinner(null);
+      } else if (data.winner) {
+        setWinner(data.winner);
+        setTie(null);
+      }
     });
 
     socket.on("new_question", (data: GameState) => {

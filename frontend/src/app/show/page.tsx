@@ -33,7 +33,6 @@ export default function ShowPage() {
     answers: { A: 0, B: 0 },
     survivorsCount: 0,
     eliminatedCount: 0,
-    userAnswer: null,
     timeLeft: 0,
   });
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -129,20 +128,28 @@ export default function ShowPage() {
     socket.on("game_state", (data: GameState) => {
       console.log("📺 Received game_state:", data);
       setGameState(data);
+      // 从 roomState 同步 winner/tie，避免重连后只收到 game_state 而漏掉 tie/winner 事件
+      if (data.tie && data.tie.length >= 2) {
+        setTie(data.tie);
+        setWinner(null);
+      } else if (data.winner) {
+        setWinner(data.winner);
+        setTie(null);
+      }
     });
 
     socket.on("new_question", (data: GameState) => {
       console.log("📺 Received new_question:", data);
-      setGameState(data);
-      // 重置倒计时
-      setFrontendTimeLeft(data.timeLeft);
+      // 避免在已结束（平局/冠军）时被新题目覆盖
+      setGameState((prev) => (prev.status === "ended" ? prev : data));
+      setFrontendTimeLeft(data.timeLeft ?? 0);
       setCountdownActive(true);
     });
 
     socket.on("round_result", (data: GameState) => {
       console.log("📺 Received round_result:", data);
-      setGameState(data);
-      // 停止倒计时
+      // 避免迟到的 round_result 覆盖已显示的平局/冠军（保持 ended 状态）
+      setGameState((prev) => (prev.status === "ended" ? prev : data));
       setCountdownActive(false);
       setFrontendTimeLeft(0);
     });
