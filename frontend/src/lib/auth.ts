@@ -53,7 +53,7 @@ export const authOptions: AuthOptions = {
         try {
           // Use token.sub instead of user.id
           token.id = token.sub || user.id || "";
-          
+
           // console.log("🔍 Checking admin and display status for:", user.email);
 
           const isAdmin = await RedisAdapter.isAdminEmail(user.email || "");
@@ -63,12 +63,12 @@ export const authOptions: AuthOptions = {
 
           const accessToken = jwt.sign({ email: user.email, isAdmin: isAdmin, isDisplay: isDisplay, id: token.id }, process.env.JWT_SECRET!, { expiresIn: '30d', issuer: 'lottery-frontend', audience: 'lottery-backend' });
           token.accessToken = accessToken;
-          
+
           // console.log("👑 Role check result:", { email: user.email, isAdmin, isDisplay });
 
         } catch (error) {
 
-          // console.error("❌ JWT callback error:", error);
+          console.error("❌ JWT callback error:", error);
           // Don't fail the whole authentication - set defaults
           token.isAdmin = false;
           token.isDisplay = false;
@@ -76,8 +76,8 @@ export const authOptions: AuthOptions = {
         }
       }
 
-      // console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin, isDisplay: token.isDisplay });
-      
+      console.log("🎫 JWT callback complete:", { id: token.id, isAdmin: token.isAdmin, isDisplay: token.isDisplay });
+
       return token;
     },
 
@@ -105,7 +105,7 @@ export const authOptions: AuthOptions = {
 
     async redirect({ url, baseUrl }) {
       // console.log("🔄 Redirect callback:", { url, baseUrl });
-      
+
       return `${baseUrl}/play`;
     },
   },
