@@ -34,9 +34,9 @@ export interface GameState {
   timeLeft: number;
 }
 
-// for player
+// for player（status 含游戏阶段 + 玩家结果，由前端根据服务端 payload 推导）
 export interface UserGameState {
-  status: "waiting" | "playing" | "ended";
+  status: 'waiting' | 'playing' | 'eliminated' | 'winner' | 'tie';
   round: number;
   userAnswer: 'A' | 'B' | null;
   timeLeft: number;
@@ -47,6 +47,61 @@ export interface RoundResult {
   minorityAnswer: 'A' | 'B';
   majorityAnswer: 'A' | 'B';
   answers: { A: number; B: number };
+}
+
+// Socket 事件 payload（与后端一致，带运行时校验）
+export interface EliminatedUserPayload {
+  userEmail: string;
+  eliminatedReason: 'no_answer' | 'majority_choice';
+}
+
+export interface EliminatedEventPayload {
+  eliminated: EliminatedUserPayload[];
+}
+
+export interface WinnerEventPayload {
+  winnerEmail: string;
+}
+
+export interface TieEventPayload {
+  finalists: string[];
+}
+
+export interface SocketErrorPayload {
+  message?: string;
+  error?: string;
+}
+
+/** 运行时校验 Socket 事件 payload */
+export function isEliminatedPayload(data: unknown): data is EliminatedEventPayload {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'eliminated' in data &&
+    Array.isArray((data as EliminatedEventPayload).eliminated) &&
+    (data as EliminatedEventPayload).eliminated.every(
+      (u): u is EliminatedUserPayload =>
+        typeof u === 'object' && u !== null && typeof (u as EliminatedUserPayload).userEmail === 'string' && ((u as EliminatedUserPayload).eliminatedReason === 'no_answer' || (u as EliminatedUserPayload).eliminatedReason === 'majority_choice')
+    )
+  );
+}
+
+export function isWinnerPayload(data: unknown): data is WinnerEventPayload {
+  return typeof data === 'object' && data !== null && 'winnerEmail' in data && typeof (data as WinnerEventPayload).winnerEmail === 'string';
+}
+
+export function isTiePayload(data: unknown): data is TieEventPayload {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'finalists' in data &&
+    Array.isArray((data as TieEventPayload).finalists) &&
+    (data as TieEventPayload).finalists.every((e) => typeof e === 'string')
+  );
+}
+
+export function isSocketErrorPayload(data: unknown): data is SocketErrorPayload {
+  return typeof data === 'object' && data !== null && ('message' in data || 'error' in data);
 }
 
 // not used at the moment

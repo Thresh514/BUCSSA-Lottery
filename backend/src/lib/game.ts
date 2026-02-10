@@ -1,7 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { redis, RedisKeys } from './redis.js';
 import { getSocketIO } from './socket.js';
-import type { MinorityQuestion, RoomState } from '../types/index.js';
+import type { MinorityQuestion, RoomState, PlayerGameState } from '../types/index.js';
 
 export type { MinorityQuestion };
 
@@ -41,6 +41,31 @@ export class GameManager {
   // }
 
   // 获取游戏状态
+  /** 根据房间状态和用户邮箱生成玩家端状态（单一 status） */
+  async getPlayerGameState(roomState: RoomState, userEmail: string): Promise<PlayerGameState> {
+    const isWinner = await redis.get(RedisKeys.gameWinner(this.roomId)) === userEmail;
+    
+    if (isWinner) 
+      return { status: 'winner', round: roomState.round, userAnswer: null, timeLeft: roomState.timeLeft };
+    
+    const tieSet = await redis.sMembers(RedisKeys.gameTie(this.roomId));
+    const isTie = tieSet?.includes(userEmail) ?? false;
+    
+    if (isTie) 
+      return { status: 'tie', round: roomState.round, userAnswer: null, timeLeft: roomState.timeLeft };
+    
+    const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(this.roomId), userEmail);
+    
+    if (isEliminated) 
+      return { status: 'eliminated', round: roomState.round, userAnswer: null, timeLeft: roomState.timeLeft };
+    
+    const questionId = roomState.currentQuestion?.id;
+    const userAnswer = questionId ? await redis.get(RedisKeys.userAnswer(userEmail, questionId)) as 'A' | 'B' | null : null;
+    const status = roomState.status === 'ended' ? 'waiting' : roomState.status;
+    
+    return { status, round: roomState.round, userAnswer: userAnswer || null, timeLeft: roomState.timeLeft };
+  }
+
   async getRoomState(): Promise<RoomState> {
     const roomId = process.env.DEFAULT_ROOM_ID!;
 
@@ -72,7 +97,7 @@ export class GameManager {
         : null;
 
     return {
-      status: gameState?.status ?? 'waiting',
+      status: (gameState?.status === 'playing' || gameState?.status === 'ended' ? gameState.status : 'waiting') as RoomState['status'],
       currentQuestion: normalizedQuestion,
       round: parseInt(currentRound ?? '0', 10),
       answers:
@@ -135,11 +160,12 @@ export class GameManager {
 
       await this.startCountdown();
 
-      const gameState = { ...roomState, "userAnswer": null, "roundResult": null, "timeLeft": this.getCurrentTimeLeft() };
-
-      this.io.to(this.roomId).emit('new_question', gameState);
-      // 启动倒计时
-
+      await this.emitToRoom('new_question', roomState, (r) => ({
+        ...r,
+        userAnswer: null,
+        roundResult: null,
+        timeLeft: this.getCurrentTimeLeft(),
+      }));
     } else {
       console.log(`❌ Socket.IO instance is null, cannot emit new_question`);
     }
@@ -293,13 +319,8 @@ export class GameManager {
     }
 
     const roomState = await this.getRoomState();
-    const gameState = { ...roomState, "userAnswer": null };
-
-    // 广播结果
     if (this.io) {
-      this.io.to(this.roomId).emit('round_result',
-        gameState
-      );
+      await this.emitToRoom('round_result', roomState, (r) => ({ ...r, userAnswer: null }));
     }
   }
 
@@ -320,18 +341,17 @@ export class GameManager {
     const redisEliminatedUsers = await redis.sMembers(RedisKeys.roomEliminated(this.roomId)) as string[];
     console.log(`Eliminated users (endGame): ${redisEliminatedUsers}`);
 
-    // 广播游戏结束
     const roomState = await this.getRoomState();
     if (this.io) {
       if (winner) {
         console.log(`Winner is ${winner}`);
         this.io.to(this.roomId).emit('winner', { winnerEmail: winner });
-        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
+        await this.emitToRoom('game_state', roomState, (r) => ({ ...r, userAnswer: null, roundResult: null }));
       }
       if (tier) {
         console.log(`Game ended in a tie between: ${tier.join(', ')}`);
         this.io.to(this.roomId).emit('tie', { finalists: tier });
-        this.io.to(this.roomId).emit("game_state", { ...roomState, userAnswer: null, roundResult: null });
+        await this.emitToRoom('game_state', roomState, (r) => ({ ...r, userAnswer: null, roundResult: null }));
       }
     }
   }
@@ -405,10 +425,22 @@ export class GameManager {
   // 初始化游戏
   async initializeGame(): Promise<void> {
     const roomState = await this.getRoomState();
-    const gameState = { ...roomState, "userAnswer": null, "roundResult": null };
-
     if (this.io) {
-      this.io.to(this.roomId).emit('game_start', gameState);
+      await this.emitToRoom('game_start', roomState, (r) => ({ ...r, userAnswer: null, roundResult: null }));
+    }
+  }
+
+  /** 按角色分发：admin/display 收完整 roomState，player 收 PlayerGameState */
+  private async emitToRoom(event: string, roomState: RoomState, adminPayload: (r: RoomState) => object): Promise<void> {
+    if (!this.io) return;
+    const sockets = await this.io.in(this.roomId).fetchSockets();
+    for (const s of sockets) {
+      const email = (s.data as { user?: { email: string } }).user?.email;
+      if (!email) continue;
+      const isAdmin = await redis.sIsMember(RedisKeys.admin(), email);
+      const isDisplay = await redis.sIsMember(RedisKeys.display(), email);
+      const payload = isAdmin || isDisplay ? adminPayload(roomState) : await this.getPlayerGameState(roomState, email);
+      s.emit(event, payload);
     }
   }
 

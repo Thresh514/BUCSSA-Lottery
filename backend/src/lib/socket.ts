@@ -78,40 +78,12 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     const roomState = await gameManager.getRoomState();
 
     if (isAdmin) {
-      const gameState = { ...roomState, "userAnswer": null };
-      socket.emit("game_state", gameState);
+      socket.emit("game_state", { ...roomState, userAnswer: null });
     } else if (isDisplay) {
-      const gameState = { ...roomState, "userAnswer": null };
-      socket.emit("game_state", gameState);
+      socket.emit("game_state", { ...roomState, userAnswer: null });
     } else {
-      if (isWinner) {
-        socket.emit('winner', {
-          winnerEmail: user.email,
-        });
-        socket.emit("game_state", { ...roomState, userAnswer: null });
-      } else if (isTie) {
-        socket.emit('tie', {
-          finalists: [user.email],
-        });
-        socket.emit("game_state", { ...roomState, userAnswer: null });
-      } else if (isEliminated) {
-        socket.emit('eliminated', {
-          "eliminated": [user.email],
-        });
-        socket.emit("game_state", { ...roomState, userAnswer: null });
-      } else {
-        const questionId = roomState.currentQuestion?.id;
-        if (!questionId) {
-          socket.emit("game_state", { ...roomState, userAnswer: null });
-          return;
-        }
-        const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
-        const game_state = {
-          ...roomState,
-          "userAnswer": userAnswer || null,
-        }
-        socket.emit("game_state", game_state);
-      }
+      const playerState = await gameManager.getPlayerGameState(roomState, user.email);
+      socket.emit("game_state", playerState);
     }
 
     if (isDisplay) {
@@ -219,27 +191,11 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         });
 
         if (questionId) {
-          const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
-          console.log(`💾 [提交答案] 从Redis获取用户答案`, {
-            userEmail: user.email,
-            questionId: questionId,
-            storedAnswer: userAnswer
-          });
-
-          const gameState = {
-            ...roomState,
-            userAnswer: userAnswer || null,
-          };
-
-          socket.emit('game_state', gameState);
+          const playerState = await gameManager.getPlayerGameState(roomState, user.email);
+          socket.emit('game_state', playerState);
           console.log(`📤 [提交答案] 已发送游戏状态更新给用户`, {
             userEmail: user.email,
-            gameState: {
-              status: gameState.status,
-              round: gameState.round,
-              userAnswer: gameState.userAnswer,
-              timeLeft: gameState.timeLeft
-            }
+            playerState: { status: playerState.status, round: playerState.round, userAnswer: playerState.userAnswer, timeLeft: playerState.timeLeft },
           });
         } else {
           console.log(`⚠️  [提交答案] 当前没有有效的题目ID`, {

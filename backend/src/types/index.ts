@@ -19,15 +19,25 @@ export interface MinorityQuestion {
   startTime: string;
 }
 
-// 房间状态（getRoomState 返回值）
+// 房间状态（getRoomState 返回值，admin/display 用）
 export interface RoomState {
-  status: string;
+  status: 'waiting' | 'playing' | 'ended';
   currentQuestion: MinorityQuestion | null;
   round: number;
   answers: { A: number; B: number } | null;
   timeLeft: number;
   survivorsCount: number;
   eliminatedCount: number;
+}
+
+// 玩家端状态（单一 status，只发给 player）
+export type PlayerStatus = 'waiting' | 'playing' | 'eliminated' | 'winner' | 'tie';
+
+export interface PlayerGameState {
+  status: PlayerStatus;
+  round: number;
+  userAnswer: 'A' | 'B' | null;
+  timeLeft: number;
 }
 
 // 淘汰信息

@@ -18,7 +18,13 @@ import {
   CheckCircle,
   Crown,
 } from "lucide-react";
-import { UserGameState } from "@/types";
+import {
+  UserGameState,
+  isEliminatedPayload,
+  isWinnerPayload,
+  isTiePayload,
+  isSocketErrorPayload,
+} from "@/types";
 import Image from "next/image";
 
 export default function PlayPage() {
@@ -30,9 +36,6 @@ export default function PlayPage() {
     timeLeft: 0,
   });
   const [selectedOption, setSelectedOption] = useState<"A" | "B" | "">("");
-  const [isEliminated, setIsEliminated] = useState(false);
-  const [isWinner, setIsWinner] = useState(false);
-  const [isTie, setIsTie] = useState(false);
   const [connected, setConnected] = useState(false);
   const [eliminatedReason, setEliminatedReason] = useState<"no_answer" | "majority_choice" | null>(null);
 
@@ -113,15 +116,11 @@ export default function PlayPage() {
     socket.on("game_start", (data: UserGameState) => {
       setUserGameState(data);
       setSelectedOption(data.userAnswer || "");
-      setIsWinner(false);
-      setIsTie(false);
-      setIsEliminated(false);
-      handleLogout();
     });
 
     socket.on("new_question", (data: UserGameState) => {
-      setSelectedOption(data.userAnswer || "");
       setUserGameState(data);
+      setSelectedOption(data.userAnswer || "");
     });
 
     socket.on("round_result", (data: UserGameState) => {
@@ -130,36 +129,44 @@ export default function PlayPage() {
       setSelectedOption(data.userAnswer || "");
     });
 
-    socket.on("eliminated", (data: any) => {
-      console.log("eliminated event data:", data);
-      const userElimination = data.eliminated.find(
-        (user: any) => user.userEmail === session.user?.email
-      );
+    socket.on("eliminated", (data: unknown) => {
+      if (!isEliminatedPayload(data)) {
+        console.warn("eliminated: invalid payload", data);
+        return;
+      }
+      const userElimination = data.eliminated.find((u) => u.userEmail === session.user?.email);
       if (userElimination) {
-        setIsEliminated(true);
+        setUserGameState((prev) => ({ ...prev, status: "eliminated" }));
         setEliminatedReason(userElimination.eliminatedReason);
       }
-      console.log("eliminated event raw:", JSON.stringify(data, null, 2));
-      console.log("session email:", session.user?.email);
     });
 
-    socket.on("winner", (data: any) => {
-      console.log("winner event data:", data);
+    socket.on("winner", (data: unknown) => {
+      if (!isWinnerPayload(data)) {
+        console.warn("winner: invalid payload", data);
+        return;
+      }
       if (data.winnerEmail === session.user?.email) {
-        setIsWinner(true);
+        setUserGameState((prev) => ({ ...prev, status: "winner" }));
       }
     });
 
-    socket.on("tie", (data: any) => {
-      console.log("tie event data:", data);
-      if (data.finalists?.includes(session.user?.email || "")) {
-        setIsTie(true);
+    socket.on("tie", (data: unknown) => {
+      if (!isTiePayload(data)) {
+        console.warn("tie: invalid payload", data);
+        return;
+      }
+      if (data.finalists.includes(session.user?.email ?? "")) {
+        setUserGameState((prev) => ({ ...prev, status: "tie" }));
       }
     });
 
-    socket.on("error", (data: any) => {
-      console.error("Socket 错误:", data);
-      data.message;
+    socket.on("error", (data: unknown) => {
+      if (isSocketErrorPayload(data)) {
+        console.error("Socket 错误:", data.message ?? data.error, data);
+      } else {
+        console.error("Socket 错误:", data);
+      }
     });
 
     return () => {
@@ -169,7 +176,7 @@ export default function PlayPage() {
   }, [session]);
 
   const handleSubmitAnswer = async (option: "A" | "B") => {
-    if (isEliminated || selectedOption) return;
+    if (userGameState.status === "eliminated" || selectedOption) return;
 
     try {
       setSelectedOption(option);
@@ -229,7 +236,7 @@ export default function PlayPage() {
       }}
     >
       {/* 全屏彩带效果 */}
-      {isWinner && (
+      {userGameState.status === "winner" && (
         <Confetti
           width={typeof window !== "undefined" ? window.innerWidth : 0}
           height={typeof window !== "undefined" ? window.innerHeight : 0}
@@ -278,7 +285,7 @@ export default function PlayPage() {
       )}
 
       {/* 开战特效 */}
-      <BattleEffect isActive={isTie} duration={3000} />
+      <BattleEffect isActive={userGameState.status === "tie"} duration={3000} />
 
       {/* Header */}
       <header className="sticky top-0 z-50 md:px-16 px-4 py-3 bg-white/25 backdrop-blur-sm border-b border-white/50">
@@ -314,7 +321,7 @@ export default function PlayPage() {
 
       {/* Game Status Cards */}
       <main className="w-full h-auto px-8 py-8 items-center justify-center flex fixed top-[40vh] left-1/2 -translate-x-1/2 -translate-y-1/2 border border-white/50 rounded-md bg-white/25 backdrop-blur-sm">
-        {userGameState.status === "waiting" && !isEliminated && (
+        {userGameState.status === "waiting" && (
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Clock className="w-8 h-8 text-blue-600" />
@@ -327,7 +334,7 @@ export default function PlayPage() {
         )}
 
         {/* User Status */}
-        {isEliminated && (
+        {userGameState.status === "eliminated" && (
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <UserX className="w-8 h-8 text-red-600" />
@@ -350,7 +357,7 @@ export default function PlayPage() {
           </div>
         )}
 
-        {isWinner && (
+        {userGameState.status === "winner" && (
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Crown className="w-8 h-8 text-green-600" />
@@ -364,7 +371,7 @@ export default function PlayPage() {
           </div>
         )}
 
-        {isTie && (
+        {userGameState.status === "tie" && (
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Trophy className="w-8 h-8 text-yellow-600" />
@@ -379,8 +386,7 @@ export default function PlayPage() {
         )}
 
         {/* Question Area */}
-        {userGameState.status === "playing" &&
-          !isEliminated && (
+        {userGameState.status === "playing" && (
             <div className="flex flex-col items-center justify-center space-y-8">
               <div className="flex items-center px-4 py-2 bg-gradient-primary text-gray-800 rounded-full text-2xl font-bold tracking-wider">
                 第 {userGameState.round} 轮
