@@ -7,7 +7,7 @@ const redis = createClient({
 
 // 连接Redis并监听错误和重连事件
 redis.connect().catch(console.error);
-redis.on("error", (err: any) => console.error("Redis Error:", err));
+redis.on("error", (err: Error) => console.error("Redis Error:", err));
 redis.on("connect", () => {
   // Redis连接成功
 });

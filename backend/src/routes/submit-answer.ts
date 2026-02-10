@@ -1,12 +1,11 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { getGameManager } from '../lib/game.js';
 import jwt from 'jsonwebtoken';
-import { JWTPayload } from '../types/index.js';
+import { JWTPayload, SubmitAnswerBody } from '../types/index.js';
 
 const router = express.Router();
 
-
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request<object, object, SubmitAnswerBody>, res: Response) => {
   try {
     const { answer } = req.body;
 
@@ -42,14 +41,15 @@ router.post('/', async (req, res) => {
       message: '答案已提交',
       answer
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('提交答案错误:', error);
-    
-    if (error.message === '没有进行中的游戏') {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message === '没有进行中的游戏') {
       return res.status(400).json({ error: '当前没有进行中的游戏' });
     }
-    
-    if (error.message === '您已被淘汰') {
+
+    if (message === '您已被淘汰') {
       return res.status(400).json({ error: '您已被淘汰，无法继续答题' });
     }
 

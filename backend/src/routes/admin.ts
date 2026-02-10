@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { getGameManager } from '../lib/game.js';
 import jwt from 'jsonwebtoken';
-import { JWTPayload } from '../types/index.js';
+import { JWTPayload, NextQuestionBody } from '../types/index.js';
 
 const router = express.Router();
 
@@ -29,7 +29,7 @@ const router = express.Router();
 // });
 
 // 发布下一题
-router.post('/next-question', async (req, res) => {
+router.post('/next-question', async (req: Request<object, object, NextQuestionBody>, res: Response) => {
   try {
     const { question, optionA, optionB } = req.body;
 
@@ -79,14 +79,14 @@ router.post('/next-question', async (req, res) => {
       message: '新题目已发布',
       question: minorityQuestion
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('发布新题目错误:', error);
     return res.status(500).json({ error: '服务器内部错误' });
   }
 });
 
 // 重置游戏
-router.post('/reset-game', async (req, res) => {
+router.post('/reset-game', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
@@ -113,7 +113,7 @@ router.post('/reset-game', async (req, res) => {
     await gameManager.setGameStartState(false);
 
     return res.status(200).json({ message: '游戏已重置' });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('重置游戏错误:', error);
     return res.status(500).json({ error: '服务器内部错误' });
   }

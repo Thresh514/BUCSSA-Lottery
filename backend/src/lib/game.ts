@@ -1,14 +1,9 @@
+import { Server as SocketIOServer } from 'socket.io';
 import { redis, RedisKeys } from './redis.js';
 import { getSocketIO } from './socket.js';
+import type { MinorityQuestion, RoomState } from '../types/index.js';
 
-// 新的题目结构 - 只有A/B两个选项
-export interface MinorityQuestion {
-  id: string;
-  question: string;
-  optionA: string;
-  optionB: string;
-  startTime: string;
-}
+export type { MinorityQuestion };
 
 let gameManagerInstance: GameManager | null = null;
 
@@ -21,7 +16,7 @@ export function getGameManager(roomId?: string): GameManager {
 
 export class GameManager {
   private roomId: string;
-  private io: any; // Socket.IO instance
+  private io: SocketIOServer | null;
   private countdownInterval: NodeJS.Timeout | null = null;
   private currentTimeLeft: number = 0;
 
@@ -46,7 +41,7 @@ export class GameManager {
   // }
 
   // 获取游戏状态
-  async getRoomState() {
+  async getRoomState(): Promise<RoomState> {
     const roomId = process.env.DEFAULT_ROOM_ID!;
 
     const [
@@ -65,14 +60,28 @@ export class GameManager {
       redis.sCard(RedisKeys.roomEliminated(roomId)),
     ]);
 
+    const normalizedQuestion: MinorityQuestion | null =
+      currentQuestion && currentQuestion.id
+        ? {
+            id: currentQuestion.id,
+            question: currentQuestion.question ?? '',
+            optionA: currentQuestion.optionA ?? '',
+            optionB: currentQuestion.optionB ?? '',
+            startTime: currentQuestion.startTime ?? '',
+          }
+        : null;
+
     return {
-      status: gameState.status || 'waiting',
-      currentQuestion: currentQuestion || null,
-      round: parseInt(currentRound || '0'),
-      answers: answers && (answers.A || answers.B) ? { A: parseInt(answers.A || '0'), B: parseInt(answers.B || '0') } : null,
+      status: gameState?.status ?? 'waiting',
+      currentQuestion: normalizedQuestion,
+      round: parseInt(currentRound ?? '0', 10),
+      answers:
+        answers && (answers.A || answers.B)
+          ? { A: parseInt(answers.A ?? '0', 10), B: parseInt(answers.B ?? '0', 10) }
+          : null,
       timeLeft: this.getCurrentTimeLeft(),
-      survivorsCount,
-      eliminatedCount,
+      survivorsCount: survivorsCount ?? 0,
+      eliminatedCount: eliminatedCount ?? 0,
     };
   }
 

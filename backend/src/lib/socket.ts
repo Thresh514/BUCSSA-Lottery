@@ -100,7 +100,11 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         });
         socket.emit("game_state", { ...roomState, userAnswer: null });
       } else {
-        const questionId = roomState.currentQuestion.id;
+        const questionId = roomState.currentQuestion?.id;
+        if (!questionId) {
+          socket.emit("game_state", { ...roomState, userAnswer: null });
+          return;
+        }
         const userAnswer = await redis.get(RedisKeys.userAnswer(user.email, questionId));
         const game_state = {
           ...roomState,
@@ -255,20 +259,22 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
           totalAnswers: (parseInt(currentAnswers.A || '0') + parseInt(currentAnswers.B || '0'))
         });
 
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : undefined;
         console.error(`💥 [提交答案] 处理答案提交时发生错误`, {
           userEmail: socket.data.user?.email,
-          error: error.message,
-          stack: error.stack,
+          error: message,
+          stack,
           timestamp: new Date().toISOString()
         });
 
-        if (error.message === '没有进行中的游戏') {
+        if (message === '没有进行中的游戏') {
           console.log(`🚫 [提交答案] 没有进行中的游戏`, {
             userEmail: socket.data.user?.email
           });
           socket.emit('answer_error', { error: '当前没有进行中的游戏' });
-        } else if (error.message === '您已被淘汰') {
+        } else if (message === '您已被淘汰') {
           console.log(`☠️  [提交答案] 用户已被淘汰`, {
             userEmail: socket.data.user?.email
           });
@@ -276,7 +282,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         } else {
           console.log(`🔥 [提交答案] 服务器内部错误`, {
             userEmail: socket.data.user?.email,
-            errorMessage: error.message
+            errorMessage: message
           });
           socket.emit('answer_error', { error: '服务器内部错误' });
         }
