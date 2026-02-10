@@ -201,8 +201,13 @@ export class GameManager {
       throw new Error('您已被淘汰'); // catch these types of errors
     }
 
-    // 记录用户答案
-    await redis.set(RedisKeys.userAnswer(userEmail, currentQuestion.toString()), answer);
+    // 幂等提交：仅首次写入成功时才计入统计（SET NX 防重复）
+    const answerKey = RedisKeys.userAnswer(userEmail, currentQuestion.toString());
+    const setOk = await redis.set(answerKey, answer, { NX: true });
+    if (setOk !== 'OK') {
+      // 已提交过，直接返回（幂等，不重复 HINCRBY）
+      return;
+    }
     await redis.hIncrBy(RedisKeys.gameAnswers(this.roomId), answer, 1);
   }
 
@@ -220,14 +225,18 @@ export class GameManager {
       B: parseInt(answersFromRedis.B || '0')
     };
 
+    // 批量查答案：一次 mGet 替代 2*N 次 GET
+    const answerKeys = survivors.map((u) => RedisKeys.userAnswer(u, currentQuestion.id.toString()));
+    const answerValues = await redis.mGet(answerKeys);
+
     let eliminatedUsers: { userEmail: string, eliminatedReason: 'no_answer' | 'majority_choice' }[] = [];
 
     // 检查未答题用户并淘汰
-    for (const userEmail of survivors) {
-      const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
+    for (let i = 0; i < survivors.length; i++) {
+      const answer = answerValues[i] ?? null;
       if (!answer || (answer !== 'A' && answer !== 'B')) {
-        // 未答题视为弃权，淘汰
-        eliminatedUsers.push({ userEmail, eliminatedReason:'no_answer' });
+        const userEmail = survivors[i];
+        eliminatedUsers.push({ userEmail, eliminatedReason: 'no_answer' });
         await redis.sRem(RedisKeys.roomSurvivors(this.roomId), userEmail);
         await redis.sAdd(RedisKeys.roomEliminated(this.roomId), userEmail);
         await redis.hSet(RedisKeys.userSession(userEmail), 'isAlive', 'false');
@@ -246,12 +255,12 @@ export class GameManager {
       majorityAnswer = answersCount.A <= answersCount.B ? 'B' : 'A';
     }
 
-    // 淘汰多数派，保留少数派
-    for (const userEmail of survivors) {
-      const answer = await redis.get(RedisKeys.userAnswer(userEmail, currentQuestion.id.toString()));
+    // 淘汰多数派，保留少数派（复用上面批量查到的 answerValues）
+    for (let i = 0; i < survivors.length; i++) {
+      const answer = answerValues[i] ?? null;
       if (majorityAnswer && answer === majorityAnswer) {
-        // 淘汰用户
-        eliminatedUsers.push({ userEmail, eliminatedReason:'majority_choice' });
+        const userEmail = survivors[i];
+        eliminatedUsers.push({ userEmail, eliminatedReason: 'majority_choice' });
         await redis.sRem(RedisKeys.roomSurvivors(this.roomId), userEmail);
         await redis.sAdd(RedisKeys.roomEliminated(this.roomId), userEmail);
         await redis.hSet(RedisKeys.userSession(userEmail), 'isAlive', 'false');
@@ -344,20 +353,46 @@ export class GameManager {
     await redis.del(RedisKeys.gameTie(this.roomId));
     await redis.del(RedisKeys.gameAnswers(this.roomId));
 
-    const answerKeys = await redis.keys(RedisKeys.userAnswer('*', '*'));
-    if (answerKeys.length > 0) {
-      for (const key of answerKeys) {
-        await redis.del(key);
+    // 使用 SCAN 替代 KEYS，避免阻塞 Redis（高并发下 KEYS 会拖慢整个实例）
+    const answerPattern = 'user:*:answer:*';
+    let answerCount = 0;
+    const answerBatch: string[] = [];
+    const BATCH_SIZE = 100;
+    for await (const keys of redis.scanIterator({ MATCH: answerPattern, COUNT: 100 })) {
+      const batch = Array.isArray(keys) ? keys : [keys];
+      for (const k of batch) {
+        answerBatch.push(k);
+        if (answerBatch.length >= BATCH_SIZE) {
+          for (const x of answerBatch) await redis.del(x);
+          answerCount += answerBatch.length;
+          answerBatch.length = 0;
+        }
       }
+    }
+    if (answerBatch.length > 0) {
+      for (const x of answerBatch) await redis.del(x);
+      answerCount += answerBatch.length;
     }
 
-    const userAccounts = await redis.keys(RedisKeys.userSession('*'));
-    console.log(`User accounts to reset: ${userAccounts.length}`);
-    if (userAccounts.length > 0) {
-      for (const key of userAccounts) {
-        await redis.del(key);
+    const sessionPattern = 'user:*:session';
+    let sessionCount = 0;
+    const sessionBatch: string[] = [];
+    for await (const keys of redis.scanIterator({ MATCH: sessionPattern, COUNT: 100 })) {
+      const batch = Array.isArray(keys) ? keys : [keys];
+      for (const k of batch) {
+        sessionBatch.push(k);
+        if (sessionBatch.length >= BATCH_SIZE) {
+          for (const x of sessionBatch) await redis.del(x);
+          sessionCount += sessionBatch.length;
+          sessionBatch.length = 0;
+        }
       }
     }
+    if (sessionBatch.length > 0) {
+      for (const x of sessionBatch) await redis.del(x);
+      sessionCount += sessionBatch.length;
+    }
+    console.log(`User accounts to reset: ${sessionCount} (answers cleared: ${answerCount})`);
 
     await redis.hSet(RedisKeys.gameState(this.roomId), 'status', 'waiting');
     await redis.hSet(RedisKeys.gameState(this.roomId), 'timeLeft', '0');
