@@ -57,6 +57,17 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Admin / Display 角色（按邮箱，可先加名单再登录）
+model UserRole {
+  id        String   @id @default(cuid())
+  email     String
+  role      String   // 'admin' | 'display'
+  createdAt DateTime @default(now())
+
+  @@unique([email, role])
+  @@index([email])
+}
+
 // 每轮快照（备份作用）
 model RoundSnapshot {
   id                String   @id @default(cuid())

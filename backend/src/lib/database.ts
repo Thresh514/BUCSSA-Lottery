@@ -11,6 +11,15 @@ if (process.env.NODE_ENV !== 'production') {
 
 export { prisma };
 
+/** 从 PostgreSQL UserRole 表按邮箱查 admin/display 角色 */
+export async function getRolesForEmail(email: string): Promise<{ isAdmin: boolean; isDisplay: boolean }> {
+  const rows = await prisma.userRole.findMany({ where: { email } });
+  return {
+    isAdmin: rows.some((r) => r.role === 'admin'),
+    isDisplay: rows.some((r) => r.role === 'display'),
+  };
+}
+
 // Round Snapshot 数据接口
 export interface RoundSnapshotData {
   roomId: string;

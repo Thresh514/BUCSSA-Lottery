@@ -2,7 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { redis, RedisKeys } from './redis.js';
 import { getSocketIO } from './socket.js';
 import type { MinorityQuestion, RoomState, PlayerGameState } from '../types/index.js';
-import { saveRoundSnapshot, saveGameResult, type RoundSnapshotData, type GameResultData } from './database.js';
+import { saveRoundSnapshot, saveGameResult, getRolesForEmail, type RoundSnapshotData, type GameResultData } from './database.js';
 
 export type { MinorityQuestion };
 
@@ -483,8 +483,7 @@ export class GameManager {
     for (const s of sockets) {
       const email = (s.data as { user?: { email: string } }).user?.email;
       if (!email) continue;
-      const isAdmin = await redis.sIsMember(RedisKeys.admin(), email);
-      const isDisplay = await redis.sIsMember(RedisKeys.display(), email);
+      const { isAdmin, isDisplay } = await getRolesForEmail(email);
       const payload = isAdmin || isDisplay ? adminPayload(roomState) : await this.getPlayerGameState(roomState, email);
       s.emit(event, payload);
     }

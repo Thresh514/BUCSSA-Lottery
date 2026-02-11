@@ -1,6 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { redis, RedisKeys } from './redis.js';
+import { getRolesForEmail } from './database.js';
 import { getGameManager } from './game.js';
 
 
@@ -48,8 +49,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     socket.join(roomId);
 
     const gameStarted = await redis.get(RedisKeys.gameStarted(roomId)) === '1';
-    const isAdmin = await redis.sIsMember(RedisKeys.admin(), user.email);
-    const isDisplay = await redis.sIsMember(RedisKeys.display(), user.email);
+    const { isAdmin, isDisplay } = await getRolesForEmail(user.email);
     const isSurviving = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
     const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(roomId), user.email);
     const tieSet = await redis.sMembers(RedisKeys.gameTie(roomId))
