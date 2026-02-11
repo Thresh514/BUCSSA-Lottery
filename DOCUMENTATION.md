@@ -82,8 +82,6 @@ lottery/
 │   │   ├── routes/          # Express API Routes
 │   │   │   ├── admin.ts     # Admin API endpoints
 │   │   │   └── submit-answer.ts # Game API endpoints
-│   │   ├── scripts/         # Management Scripts
-│   │   │   └── manage-display-users.ts # User management
 │   │   ├── types/           # Backend type definitions
 │   │   └── index.ts         # Server entry point
 │   ├── dist/                # Compiled JavaScript
@@ -290,6 +288,22 @@ display:emails               # Display screen emails (Set)
 4. Redis adapter stores session data
 5. Middleware validates protected routes
 6. Socket.IO authenticates using JWT
+
+### Role Management (PostgreSQL)
+Roles are stored on the `User` table as a `role` column with default `player`.
+
+Update roles manually in PostgreSQL (examples):
+
+```sql
+-- Make a user admin
+UPDATE "User" SET role = 'admin' WHERE email = 'you@example.com';
+
+-- Make a user display
+UPDATE "User" SET role = 'display' WHERE email = 'you@example.com';
+
+-- Reset to player
+UPDATE "User" SET role = 'player' WHERE email = 'you@example.com';
+```
 
 ## 🚀 Production Deployment
 

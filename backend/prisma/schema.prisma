@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -31,41 +30,14 @@ model Account {
   @@unique([provider, providerAccountId])
 }
 
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  role          String    @default("player")
   accounts      Account[]
-  sessions      Session[]
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-// Admin / Display 角色（按邮箱，可先加名单再登录）
-model UserRole {
-  id        String   @id @default(cuid())
-  email     String
-  role      String   // 'admin' | 'display'
-  createdAt DateTime @default(now())
-
-  @@unique([email, role])
-  @@index([email])
 }
 
 // 每轮快照（备份作用）

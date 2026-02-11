@@ -3,6 +3,7 @@ import { Server as HTTPServer } from 'http';
 import { redis, RedisKeys } from './redis.js';
 import { getRolesForEmail } from './database.js';
 import { getGameManager } from './game.js';
+import { ROOM_ID } from './room.js';
 
 
 // 全局Socket.IO服务器实例
@@ -45,16 +46,15 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
     const user = socket.data.user;
 
     // 用户加入游戏房间
-    const roomId = process.env.DEFAULT_ROOM_ID!;
-    socket.join(roomId);
+    socket.join(ROOM_ID);
 
-    const gameStarted = await redis.get(RedisKeys.gameStarted(roomId)) === '1';
+    const gameStarted = await redis.get(RedisKeys.gameStarted()) === '1';
     const { isAdmin, isDisplay } = await getRolesForEmail(user.email);
-    const isSurviving = await redis.sIsMember(RedisKeys.roomSurvivors(roomId), user.email);
-    const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(roomId), user.email);
-    const tieSet = await redis.sMembers(RedisKeys.gameTie(roomId))
+    const isSurviving = await redis.sIsMember(RedisKeys.roomSurvivors(), user.email);
+    const isEliminated = await redis.sIsMember(RedisKeys.roomEliminated(), user.email);
+    const tieSet = await redis.sMembers(RedisKeys.gameTie());
     const isTie = tieSet ? tieSet.includes(user.email) : false;
-    const isWinner = await redis.get(RedisKeys.gameWinner(roomId)) === user.email;
+    const isWinner = await redis.get(RedisKeys.gameWinner()) === user.email;
     const isExistingPlayer = isSurviving || isEliminated || isWinner || isTie;
 
 
@@ -90,8 +90,8 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       const remainingTime = gameManager.getCurrentTimeLeft();
       socket.emit('countdown_update', { timeLeft: remainingTime });
 
-      const winner = await redis.get(RedisKeys.gameWinner(roomId));
-      const tie = await redis.sMembers(RedisKeys.gameTie(roomId));
+      const winner = await redis.get(RedisKeys.gameWinner());
+      const tie = await redis.sMembers(RedisKeys.gameTie());
 
       if (winner) {
         console.log('Found winner, winner:', user.email);
@@ -111,7 +111,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
       const user = socket.data.user;
       if (user && !isAdmin && !isDisplay) {
         redis.del(RedisKeys.userOnline(user.email));
-        // redis.sRem(RedisKeys.roomSurvivors(roomId), user.email);
+        // redis.sRem(RedisKeys.roomSurvivors(), user.email);
       }
       gameManager.emitPlayerCountUpdate();
     });
@@ -133,7 +133,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
           answer: answer,
           isAdmin: isAdmin,
           isDisplay: isDisplay,
-          roomId: roomId
+          roomId: ROOM_ID
         });
 
         if (isAdmin || isDisplay) {
@@ -205,7 +205,7 @@ export function initializeSocketIO(httpServer: HTTPServer): SocketIOServer {
         }
 
         // 获取当前答案统计并记录
-        const currentAnswers = await redis.hGetAll(RedisKeys.gameAnswers(roomId));
+        const currentAnswers = await redis.hGetAll(RedisKeys.gameAnswers());
         console.log(`📈 [提交答案] 当前答案统计`, {
           userEmail: user.email,
           answerCounts: {

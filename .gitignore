@@ -43,3 +43,5 @@ backend/dist/
 .DS_Store
 
 flood-test/gameState.json
+
+frontend/prisma/migrations

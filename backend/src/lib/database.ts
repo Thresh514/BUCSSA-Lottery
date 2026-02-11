@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { ROOM_ID } from './room.js';
 
 // PrismaClient 单例（避免连接池耗尽）
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
@@ -11,18 +12,26 @@ if (process.env.NODE_ENV !== 'production') {
 
 export { prisma };
 
-/** 从 PostgreSQL UserRole 表按邮箱查 admin/display 角色 */
+/** 从 PostgreSQL User.role 列按邮箱查 admin/display 角色 */
 export async function getRolesForEmail(email: string): Promise<{ isAdmin: boolean; isDisplay: boolean }> {
-  const rows = await prisma.userRole.findMany({ where: { email } });
+  if (!email) {
+    return { isAdmin: false, isDisplay: false };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { role: true },
+  });
+
+  const role = user?.role ?? 'player';
   return {
-    isAdmin: rows.some((r) => r.role === 'admin'),
-    isDisplay: rows.some((r) => r.role === 'display'),
+    isAdmin: role === 'admin',
+    isDisplay: role === 'display',
   };
 }
 
 // Round Snapshot 数据接口
 export interface RoundSnapshotData {
-  roomId: string;
   roundNumber: number;
   questionId: string;
   questionText: string | null;
@@ -44,7 +53,6 @@ export interface RoundSnapshotData {
 
 // Game Result 数据接口
 export interface GameResultData {
-  roomId: string;
   winnerEmail: string | null;
   tierEmails: string[];
   finalRound: number;
@@ -60,7 +68,7 @@ export async function saveRoundSnapshot(data: RoundSnapshotData): Promise<void> 
     // 创建 RoundSnapshot
     const snapshot = await prisma.roundSnapshot.create({
       data: {
-        roomId: data.roomId,
+        roomId: ROOM_ID,
         roundNumber: data.roundNumber,
         questionId: data.questionId,
         questionText: data.questionText,
@@ -103,7 +111,7 @@ export async function saveGameResult(data: GameResultData): Promise<void> {
     const TIMEOUT_MS = 3000;
     await Promise.race([
       prisma.gameResult.upsert({
-        where: { roomId: data.roomId },
+        where: { roomId: ROOM_ID },
         update: {
           winnerEmail: data.winnerEmail,
           tierEmails: data.tierEmails,
@@ -112,7 +120,7 @@ export async function saveGameResult(data: GameResultData): Promise<void> {
           endedAt: new Date(),
         },
         create: {
-          roomId: data.roomId,
+          roomId: ROOM_ID,
           winnerEmail: data.winnerEmail,
           tierEmails: data.tierEmails,
           finalRound: data.finalRound,
