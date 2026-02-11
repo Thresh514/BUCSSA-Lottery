@@ -2,6 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { redis, RedisKeys } from './redis.js';
 import { getSocketIO } from './socket.js';
 import type { MinorityQuestion, RoomState, PlayerGameState } from '../types/index.js';
+import { saveRoundSnapshot, saveGameResult, type RoundSnapshotData, type GameResultData } from './database.js';
 
 export type { MinorityQuestion };
 
@@ -322,6 +323,31 @@ export class GameManager {
     if (this.io) {
       await this.emitToRoom('round_result', roomState, (r) => ({ ...r, userAnswer: null }));
     }
+
+    // 异步保存 Round Snapshot（Fire-and-forget，备份作用）
+    const snapshotData: RoundSnapshotData = {
+      roomId: this.roomId,
+      roundNumber: parseInt(await redis.get(RedisKeys.currentRound(this.roomId)) || '0'),
+      questionId: currentQuestion.id,
+      questionText: currentQuestion.question || null,
+      optionA: currentQuestion.optionA || null,
+      optionB: currentQuestion.optionB || null,
+      answerCountA: answersCount.A,
+      answerCountB: answersCount.B,
+      minorityAnswer,
+      majorityAnswer,
+      survivorsBefore: survivors.length,
+      survivorsAfter: remainingSurvivors.length,
+      startedAt: currentQuestion.startTime ? new Date(currentQuestion.startTime) : new Date(),
+      endedAt: new Date(),
+      eliminatedUsers,
+    };
+
+    // Fire-and-forget：异步写入，失败不影响游戏流程
+    saveRoundSnapshot(snapshotData).catch((err) => {
+      console.error('Failed to save round snapshot (non-blocking):', err);
+      // 不影响游戏流程（备份数据）
+    });
   }
 
   // 结束游戏
@@ -354,6 +380,26 @@ export class GameManager {
         await this.emitToRoom('game_state', roomState, (r) => ({ ...r, userAnswer: null, roundResult: null }));
       }
     }
+
+    // 同步保存 Game Result（关键数据，带 500ms 超时保护）
+    const currentRound = parseInt(await redis.get(RedisKeys.currentRound(this.roomId)) || '0');
+    
+    // 计算总轮数：从 RoundSnapshot 统计，如果没有则使用当前轮次
+    // 注意：这里简化处理，使用当前轮次作为总轮数
+    // 如果需要精确的总轮数，可以从 RoundSnapshot 表查询
+    const totalRounds = currentRound;
+
+    const gameResultData: GameResultData = {
+      roomId: this.roomId,
+      winnerEmail: winner,
+      tierEmails: tier || [],
+      finalRound: currentRound,
+      totalRounds,
+    };
+
+    // 同步写入，带 500ms 超时保护
+    // 如果超时或失败：记录日志，但不阻塞游戏（Redis 已保存，关键数据不丢失）
+    await saveGameResult(gameResultData);
   }
 
   // 重置游戏

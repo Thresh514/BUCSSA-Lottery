@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth.js 需要的表
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// 每轮快照（备份作用）
+model RoundSnapshot {
+  id                String   @id @default(cuid())
+  roomId            String
+  roundNumber       Int
+  questionId        String
+  questionText      String?  @db.Text
+  optionA           String?  @db.Text
+  optionB           String?  @db.Text
+  answerCountA      Int      @default(0)
+  answerCountB      Int      @default(0)
+  minorityAnswer    String?  // 'A' or 'B' or null (tie)
+  majorityAnswer    String?  // 'A' or 'B' or null (tie)
+  survivorsBefore   Int
+  survivorsAfter     Int
+  startedAt         DateTime
+  endedAt           DateTime
+  createdAt         DateTime @default(now())
+  
+  eliminations      RoundElimination[]
+  
+  @@index([roomId, roundNumber])
+  @@index([createdAt])
+}
+
+// 每轮淘汰名单
+model RoundElimination {
+  id                String   @id @default(cuid())
+  roundSnapshotId   String
+  userEmail         String
+  eliminatedReason String   // 'no_answer' | 'majority_choice'
+  eliminatedAt      DateTime @default(now())
+  
+  roundSnapshot     RoundSnapshot @relation(fields: [roundSnapshotId], references: [id], onDelete: Cascade)
+  
+  @@index([roundSnapshotId])
+  @@index([userEmail])
+}
+
+// 游戏最终结果（关键数据，必须持久化）
+model GameResult {
+  id                String   @id @default(cuid())
+  roomId            String
+  winnerEmail       String?  // 获胜者邮箱（如果有）
+  tierEmails        String[] // 平局名单（如果有）
+  finalRound        Int      // 最终轮次
+  totalRounds       Int      // 总轮数
+  endedAt           DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  
+  @@unique([roomId]) // 每个房间只有一个最终结果
+  @@index([roomId])
+  @@index([endedAt])
+}

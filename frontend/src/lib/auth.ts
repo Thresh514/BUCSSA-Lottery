@@ -1,8 +1,15 @@
 import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { PrismaClient } from "@prisma/client";
 import { RedisAdapter } from "./redis-adapter";
 import jwt from 'jsonwebtoken';
+
+// Avoid exhausting your database connection limit in development (HMR).
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -16,7 +23,9 @@ export const authOptions: AuthOptions = {
       tenantId: process.env.AZURE_AD_TENANT_ID!,
     })
   ],
-  adapter: RedisAdapter,
+  // Persist users + linked OAuth accounts in Postgres (Railway).
+  // Keep Redis for *game state* and for your admin/display email sets.
+  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -56,6 +65,7 @@ export const authOptions: AuthOptions = {
           
           // console.log("🔍 Checking admin and display status for:", user.email);
 
+          // Roles are currently stored in Redis sets: `nextauth:admin_emails` / `nextauth:display_emails`
           const isAdmin = await RedisAdapter.isAdminEmail(user.email || "");
           const isDisplay = await RedisAdapter.isDisplayEmail(user.email || "");
           token.isAdmin = isAdmin;

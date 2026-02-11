@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@auth/core": "^0.41.1",
+    "@auth/prisma-adapter": "^2.11.1",
+    "@prisma/client": "^6.19.2",
     "@radix-ui/react-slot": "^1.2.3",
     "@react-spring/web": "^10.0.2",
     "@tsparticles/react": "^3.0.0",
@@ -42,6 +44,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.1",
     "postcss": "^8.4.35",
+    "prisma": "^6.19.2",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
