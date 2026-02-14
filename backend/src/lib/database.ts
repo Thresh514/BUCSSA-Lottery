@@ -30,25 +30,16 @@ export async function getRolesForEmail(email: string): Promise<{ isAdmin: boolea
   };
 }
 
-// Round Snapshot 数据接口
+// Round Snapshot（最新快照，用于 Redis 崩溃恢复）数据接口
 export interface RoundSnapshotData {
-  roundNumber: number;
-  questionId: string;
-  questionText: string | null;
-  optionA: string | null;
-  optionB: string | null;
-  answerCountA: number;
-  answerCountB: number;
-  minorityAnswer: string | null; // 'A' | 'B' | null
-  majorityAnswer: string | null; // 'A' | 'B' | null
-  survivorsBefore: number;
-  survivorsAfter: number;
-  startedAt: Date;
-  endedAt: Date;
-  eliminatedUsers: Array<{
-    userEmail: string;
-    eliminatedReason: 'no_answer' | 'majority_choice';
-  }>;
+  /** 上一轮结束后仍存活的邮箱列表（恢复核心） */
+  survivorEmails: string[];
+  /** 当前轮次号（用于恢复 Redis currentRound） */
+  currentRound: number;
+  /** 轮次边界恢复仅需 waiting */
+  status: 'waiting';
+  /** 对应 Redis gameStarted（用于连接时是否拦截新用户） */
+  started: boolean;
 }
 
 // Game Result 数据接口
@@ -60,46 +51,58 @@ export interface GameResultData {
 }
 
 /**
- * 异步保存 Round Snapshot（Fire-and-forget）
- * 备份数据，写入失败不影响游戏流程
+ * Upsert 最新快照（单条记录，roomId 唯一）。
+ *
+ * 说明：快照仅在 Redis 丢失时使用；正常运行时以 Redis 为准。
  */
-export async function saveRoundSnapshot(data: RoundSnapshotData): Promise<void> {
+export async function upsertLatestSnapshot(data: RoundSnapshotData): Promise<void> {
   try {
-    // 创建 RoundSnapshot
-    const snapshot = await prisma.roundSnapshot.create({
-      data: {
+    await prisma.roundSnapshot.upsert({
+      where: { roomId: ROOM_ID },
+      update: {
+        currentRound: data.currentRound,
+        status: data.status,
+        started: data.started,
+        survivorEmails: data.survivorEmails,
+      },
+      create: {
         roomId: ROOM_ID,
-        roundNumber: data.roundNumber,
-        questionId: data.questionId,
-        questionText: data.questionText,
-        optionA: data.optionA,
-        optionB: data.optionB,
-        answerCountA: data.answerCountA,
-        answerCountB: data.answerCountB,
-        minorityAnswer: data.minorityAnswer,
-        majorityAnswer: data.majorityAnswer,
-        survivorsBefore: data.survivorsBefore,
-        survivorsAfter: data.survivorsAfter,
-        startedAt: data.startedAt,
-        endedAt: data.endedAt,
+        currentRound: data.currentRound,
+        status: data.status,
+        started: data.started,
+        survivorEmails: data.survivorEmails,
       },
     });
-
-    // 批量插入淘汰名单
-    if (data.eliminatedUsers.length > 0) {
-      await prisma.roundElimination.createMany({
-        data: data.eliminatedUsers.map((u) => ({
-          roundSnapshotId: snapshot.id,
-          userEmail: u.userEmail,
-          eliminatedReason: u.eliminatedReason,
-          eliminatedAt: data.endedAt,
-        })),
-      });
-    }
   } catch (error) {
-    console.error('Failed to save round snapshot:', error);
-    throw error; // 重新抛出，让调用者处理
+    console.error('Failed to upsert latest snapshot:', error);
+    throw error;
   }
+}
+
+export type LatestSnapshot = {
+  roomId: string;
+  currentRound: number;
+  status: string;
+  started: boolean;
+  survivorEmails: string[];
+  updatedAt: Date;
+  createdAt: Date;
+};
+
+/** 读取最新快照（单条记录）。找不到返回 null。 */
+export async function getLatestSnapshot(): Promise<LatestSnapshot | null> {
+  return prisma.roundSnapshot.findUnique({
+    where: { roomId: ROOM_ID },
+    select: {
+      roomId: true,
+      currentRound: true,
+      status: true,
+      started: true,
+      survivorEmails: true,
+      updatedAt: true,
+      createdAt: true,
+    },
+  });
 }
 
 /**

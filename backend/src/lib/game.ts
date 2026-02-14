@@ -2,7 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { redis, RedisKeys } from './redis.js';
 import { getSocketIO } from './socket.js';
 import type { MinorityQuestion, RoomState, PlayerGameState } from '../types/index.js';
-import { saveRoundSnapshot, saveGameResult, getRolesForEmail, type RoundSnapshotData, type GameResultData } from './database.js';
+import { upsertLatestSnapshot, saveGameResult, getRolesForEmail, type RoundSnapshotData, type GameResultData } from './database.js';
 import { ROOM_ID } from './room.js';
 
 export type { MinorityQuestion };
@@ -321,28 +321,17 @@ export class GameManager {
       await this.emitToRoom('round_result', roomState, (r) => ({ ...r, userAnswer: null }));
     }
 
-    // 异步保存 Round Snapshot（Fire-and-forget，备份作用）
+    // Upsert 最新快照（用于 Redis 崩溃恢复；只在轮次边界使用）
     const snapshotData: RoundSnapshotData = {
-      roundNumber: parseInt(await redis.get(RedisKeys.currentRound()) || '0'),
-      questionId: currentQuestion.id,
-      questionText: currentQuestion.question || null,
-      optionA: currentQuestion.optionA || null,
-      optionB: currentQuestion.optionB || null,
-      answerCountA: answersCount.A,
-      answerCountB: answersCount.B,
-      minorityAnswer,
-      majorityAnswer,
-      survivorsBefore: survivors.length,
-      survivorsAfter: remainingSurvivors.length,
-      startedAt: currentQuestion.startTime ? new Date(currentQuestion.startTime) : new Date(),
-      endedAt: new Date(),
-      eliminatedUsers,
+      survivorEmails: remainingSurvivors,
+      currentRound: parseInt((await redis.get(RedisKeys.currentRound())) || '0', 10),
+      status: 'waiting',
+      started: true,
     };
 
-    // Fire-and-forget：异步写入，失败不影响游戏流程
-    saveRoundSnapshot(snapshotData).catch((err) => {
-      console.error('Failed to save round snapshot (non-blocking):', err);
-      // 不影响游戏流程（备份数据）
+    // Fire-and-forget：失败不影响游戏流程（Redis 仍是主状态）
+    upsertLatestSnapshot(snapshotData).catch((err) => {
+      console.error('Failed to upsert latest snapshot (non-blocking):', err);
     });
   }
 
@@ -359,6 +348,14 @@ export class GameManager {
         await redis.sAdd(RedisKeys.gameTie(), finalist);
       }
     }
+
+    // 游戏结束后不需要恢复到下一轮：标记快照为 inactive（best-effort）
+    upsertLatestSnapshot({
+      survivorEmails: [],
+      currentRound: parseInt((await redis.get(RedisKeys.currentRound())) || '0', 10),
+      status: 'waiting',
+      started: false,
+    }).catch(() => {});
 
     const redisEliminatedUsers = await redis.sMembers(RedisKeys.roomEliminated()) as string[];
     console.log(`Eliminated users (endGame): ${redisEliminatedUsers}`);
@@ -407,12 +404,24 @@ export class GameManager {
     }
     this.currentTimeLeft = 0;
 
+    // Admin reset is a normal operation: disable PG-based auto-recovery briefly
+    // to avoid treating this reset as a Redis crash.
+    await redis.set(RedisKeys.recoveryDisabled(), '1', { EX: 30 });
+
     await redis.del(RedisKeys.currentQuestion());
     await redis.del(RedisKeys.roomSurvivors());
     await redis.del(RedisKeys.roomEliminated());
     await redis.del(RedisKeys.gameWinner());
     await redis.del(RedisKeys.gameTie());
     await redis.del(RedisKeys.gameAnswers());
+
+    // Reset 后不应自动从旧快照恢复：清空/停用快照（best-effort）
+    upsertLatestSnapshot({
+      survivorEmails: [],
+      currentRound: 0,
+      status: 'waiting',
+      started: false,
+    }).catch(() => {});
 
     // 使用 SCAN 替代 KEYS，避免阻塞 Redis（高并发下 KEYS 会拖慢整个实例）
     const answerPattern = 'user:*:answer:*';

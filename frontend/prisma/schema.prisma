@@ -40,29 +40,21 @@ model User {
   accounts      Account[]
 }
 
-// 每轮快照（备份作用）
+// 最新快照（用于 Redis 崩溃后的恢复；单房间单条记录）
 model RoundSnapshot {
   id                String   @id @default(cuid())
   roomId            String
-  roundNumber       Int
-  questionId        String
-  questionText      String?  @db.Text
-  optionA           String?  @db.Text
-  optionB           String?  @db.Text
-  answerCountA      Int      @default(0)
-  answerCountB      Int      @default(0)
-  minorityAnswer    String?  // 'A' or 'B' or null (tie)
-  majorityAnswer    String?  // 'A' or 'B' or null (tie)
-  survivorsBefore   Int
-  survivorsAfter     Int
-  startedAt         DateTime
-  endedAt           DateTime
+  currentRound      Int
+  status            String   @default("waiting") // waiting | playing | ended（恢复只用 waiting）
+  started           Boolean  @default(false)     // 对应 Redis gameStarted
+  survivorEmails    String[]                    // 上一轮结束后仍存活的邮箱列表（恢复核心）
+  updatedAt         DateTime @updatedAt
   createdAt         DateTime @default(now())
   
   eliminations      RoundElimination[]
   
-  @@index([roomId, roundNumber])
-  @@index([createdAt])
+  @@unique([roomId])
+  @@index([updatedAt])
 }
 
 // 每轮淘汰名单

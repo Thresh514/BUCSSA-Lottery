@@ -28,6 +28,9 @@ export { redis };
 export const RedisKeys = {
   gameStarted: () => `game:${ROOM_ID}:started`,
 
+  /** Reset 后短暂禁用自动恢复（避免误判为 Redis 崩溃） */
+  recoveryDisabled: () => `recovery:${ROOM_ID}:disabled`,
+
   // 当前题目信息
   currentQuestion: () => `current_question:${ROOM_ID}`,
   
